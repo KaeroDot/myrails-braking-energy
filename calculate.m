@@ -5,13 +5,14 @@
 % Helko van den Brom, Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 % hvdbrom@vsl.nl
 
-%% --- Constants --------------------
+%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%
 % sampling frequency (Hz):
 fs = 37.5e3;
-% chopping frequency (Hz):
-fch = 195;
 % directory with all data:
-dirpath = '.';
+dirpath = 'exampledata';
+% make plots? (0/1);
+plots = 1;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% --- Load data --------------------
 % load example data
@@ -24,18 +25,10 @@ dirpath = '.';
 %       HopB = Current in lowest rheostat measured with an HOP800 transducer
 %       IrogA = Current in highest rheostat measured with a Rogowski coil transducer
 %       IrogB = Current in lowest rheostat measured with a Rogowski coil transducer
-
-% % load('example.mat');
-% remove unneeded quantities to save memory:
-% % clear Vupf; clear Ip; clear HopA; clear HopB;
-% 
-% load('~/a/myrails/gdrive/MyRailS_measurements/E464/Alessandria-Novara-01-25-19-7.40pm/IrogA.mat');
+% loaded quantities are renamed to naming used in paper
 load(fullfile(dirpath, 'IrogA.mat'));
 Ia = IrogA(:)';
 clear IrogA;
-% load('~/a/myrails/gdrive/MyRailS_measurements/E464/Alessandria-Novara-01-25-19-7.40pm/IrogB.mat')
-% load('~/a/myrails/gdrive/MyRailS_measurements/E464/Alessandria-Novara-01-25-19-7.40pm/Vhf.mat')
-% load('~/a/myrails/gdrive/MyRailS_measurements/E464/Alessandria-Novara-01-25-19-7.40pm/Vdwnf.mat')
 
 %% --- Trigger level --------------------
 % get trigger level as a middle of two histogram maxima. Hopefully it is more noise resistant than
@@ -52,12 +45,12 @@ NN(max1id) = 0;
 max2id = max2id(1);
 % trigger level as half distance between two most common voltage levels:
 triglvl = abs(XX(max2id) - XX(max1id))./2;
+% braking waveform, contains only 0, 1 %XXXXXXXXXXXx what about IrogB?
+braking = Ia > triglvl;
 
-braking = Ia > triglvl; % contains only 0, 1 %XXXXXXXXXXXx
-
-%% --- Find sections of braking --------------------
-% A section of braking ends if no breaking for at least 1 second long.
-% Reshape current into sections 1 seconds long and find indexes of sections when braking
+%% --- Find braking groups --------------------
+% A group of braking ends if no breaking for at least 1 second long.
+% Reshape current into groups 1 seconds long and find indexes of groups when braking
 % starts/stops.
 
 % group duration in seconds:
@@ -84,22 +77,26 @@ groups_start_id = groups_start.*group_samples - group_samples;
 groups_end_id = [groups_start_id length(braking)];
 groups_start_id = [1 groups_start_id];
 
-figure
-hold on
-plot(groupsids, groups)
-yl = ylim;
-for i = 1:length(groups_start_id)
-        plot([groups_start_id(i) groups_start_id(i)], yl)
-endfor
-hold off
-xlabel('index of Ia')
-ylabel('braking intensity (arbitrary)')
-title('braking groups')
+%% --- Plot braking groups --------------------
+if plots
+        figure
+        hold on
+        plot(groupsids, groups)
+        yl = ylim;
+        for i = 1:length(groups_start_id)
+                plot([groups_start_id(i) groups_start_id(i)], yl)
+        end
+        hold off
+        xlabel('Index of Ia')
+        ylabel('Braking intensity (arbitrary)')
+        title('Braking detection in braking groups and starts of groups')
+        saveplot('braking_groups', dirpath);
+end
 
 % clear quantities not needed anymore:
 clear braking;
 
-%% --- Divide into groups and save data --------------------
+%% --- Divide data into groups and save data as new files --------------------
 % filenames to process:
 fnms = {'IrogA', 'IrogB', 'Vdwnf', 'Vhf'}; % IrogA is already loaded as Ia
 % variables to process (paper use different variable names than measured files)
@@ -110,12 +107,13 @@ for j = 1:length(varnms)
                 fng{j, i} = fullfile(dirpath, [varnms{j} sprintf('-%05d', i) '.mat']);
                 % check if file exist:
                 isfile(j, i) = exist(fng{j, i});
-        endfor
-endfor
+        end
+end
 
 % load and splits for those variables and filenames that do not exist:
 for j = 1:length(varnms)
         if ~all(isfile(j, :))
+                % XXX do not load IrogA - already loaded
                 load(fullfile(dirpath, [fnms{j} '.mat']));
                 eval([fnms{j} 'all = ' fnms{j} '; clear ' fnms{j} ';']);
                 for i = 1:length(groups_start_id)
@@ -123,23 +121,24 @@ for j = 1:length(varnms)
                                 % cuts variable to single group
                                 % and rename it to be consistent with the paper
                                 % and ensure row vectors:
-                                eval([varnms{j} ' = ' fnms{j} 'all(' num2str(groups_start_id(i)) ':' num2str(groups_end_id(i)) ')(:);']);
+                                eval([varnms{j} ' = ' fnms{j} 'all(' num2str(groups_start_id(i)) ':' num2str(groups_end_id(i)) ')(:)' char(39) ';']);
                                 save('-v7', fng{j, i}, varnms{j});
                         end
                 end
                 eval(['clear ' varnms{j}]);
         end
 end
-%% --- Calculate energy for individual groups --------------------
 
+%% --- Calculate energy for individual groups --------------------
 E_1 = zeros(size(groups_start_id));
 E_2 = zeros(size(groups_start_id));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
-        % function [E1 E2] = energy(Ia, Ib, Vhf, Vdsf, plotting);
-        % ~/a/myrails/gdrive/MyRailS_measurements/E464/Alessandria-Novara-01-25-19-7.40pm/
-        [E_1(i) E_2(i)] = energy(i, fs, fch, triglvl, dirpath, 0);
-endfor
+        % function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plotting);
+        [E_1(i) E_2(i)] = energy(i, fs, triglvl, dirpath, plots);
+end
 
+disp([' === estimates for total data  ===']);
+disp(['Total energy 1: ' num2str(sum(E_1)) ' J, total energy 2: ' num2str(sum(E_2)) ' J.']);
 disp(['Error between two energies (E2-E1)/E2 (%):']);
-(E_2-E_1)/E_1.*100
+(sum(E_2)-sum(E_1))./sum(E_1).*100

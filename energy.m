@@ -1,5 +1,5 @@
 %% === Calculate energy of a braking sequence ====================
-function [E_1 E_2] = energy(groupindex, fs, fch, triglvl, dirpath, plotting);
+function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plots);
 
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
 % generate all filenames
@@ -106,7 +106,12 @@ else
         offset = fix(min(lengthsoff)./2);
         disp(["\nMinimal off length is " num2str(min(lengthsoff)) ' samples, so all pulsestarts will be moved back by ' num2str(offset) ' samples.'])
         id_pulsestartO = id_pulsestart - offset;
-
+        % fix first negative index:
+        if id_pulsestartO(1) < 1
+                id_pulsestartO(1) = 1;
+        end
+        % XXX now here could be some overlap, if id_pulsestart = [1 20 120 ] and offset = 50,
+        % than one gets id_pulsestartO = [1 -30 70 ...] - how to solve?
         t_pulsestart = t(id_pulsestart);
         t_pulsestartO = t(id_pulsestartO);
 
@@ -118,25 +123,19 @@ else
         %% --- Split signal into individual current pulses --------------------
         disp('Splitting signal...')
         % indexes where split will happen:
-        splitidx1 = id_pulsestartO(1:end); % index of start of split
+        splitidx1 = id_pulsestartO; % index of start of split
         splitidx2 = splitidx1;             % index of end of split
         % add index for start of waveform:
         splitidx1 = [1 splitidx1];
         % add index for end of waveform:
         splitidx2(end+1) = length(Ia);
-endif
+end
 
 % make split:
 Ia_splits = arrayfun( @(r1,r2) Ia(r1:r2), splitidx1, splitidx2, 'uni', false );
 Ib_splits = arrayfun( @(r1,r2) Ib(r1:r2), splitidx1, splitidx2, 'uni', false );
 Vhf_splits = arrayfun( @(r1,r2) Vhf(r1:r2), splitidx1, splitidx2, 'uni', false );
 Vdsfhf_splits = arrayfun( @(r1,r2) Vdsfhf(r1:r2), splitidx1, splitidx2, 'uni', false );
-
-%% --- Calculate current integral --------------------
-% XXX probably this section is not needed anymore
-% calculate integral of currents of pulses (./fs is for proper scaling):
-Ia_pulse_int = 1./fs.*cellfun(@trapz, Ia_splits, 'uni', true);
-Ib_pulse_int = 1./fs.*cellfun(@trapz, Ib_splits, 'uni', true);
 
 %% --- Calculate power and energy --------------------
 disp('Power and energy...')
@@ -145,10 +144,10 @@ if isempty(periods)
 else
         % prepare indexing vectors for two powers 
         % i.e. make series 1,0,1,0,... (based on square.m from statistics package):
-        sw1 = [1:length(t_pulsestart)+1]; %XXX opravdu t_pulsestart tady?
+        sw1 = [1:length(splitidx1)];
         sw1 = 0.5*sw1;
         sw1 = (sw1 - floor(sw1)>=0.5);
-endif
+end
 
 % multiply current and voltage for configuration 1 (a*hf, b*dsfhf)
 Phf_1 = Ia.*Vhf;
@@ -181,9 +180,8 @@ disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E_2-E_1)/E_1.*100)]
 % calculate average offset level
 
 %% --- Plotting --------------------
-disp('Plotting...')
-
-if plotting
+if plots
+        disp('Plotting...')
         % % plot current with lines showing splitting - this is figure challenging the hardware, use only if
         % % needed!
         % figure
@@ -193,96 +191,82 @@ if plotting
         % y = repmat(yl', 1, length(t_pulsestartO));
         % for i = 1:length(t_pulsestartO)
         %         plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
-        % endfor
+        % end
         % plot(t_pulsestart, Ia, '-b')
         % hold off
         % title('Current waveform')
         % xlabel('time (s)')
         % ylabel('I (A)')
+        % saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
 
         % plot selected current pulses, so user can visually check if splitting occured correctly:
         figure
         hold on
-        for i = fix(linspace(1, length(Ia_splits), 100))
+        noofpulses = ceil(length(Ia_splits)./100);
+        lens = [];
+        for i = fix(linspace(1, length(Ia_splits), noofpulses))
                 plot(Ia_splits{i})
-        endfor
+                lens(end+1) = length(Ia_splits{i});
+        end
         hold off
         title('Selected current pulses, Ia')
         xlabel('time (samples), zero is arbitrary')
-        xlabel('current (A)')
+        ylabel('current (A)')
+        xlim([1 min(lens)])
+        saveplot(sprintf('%05d-selected_current_pulses_Ia', groupindex), dirpath)
 
-        % plot integral of current pulses
-        % probably not needed anymore XXX
-        figure
-        plot(t, Ia);
-        title('Integrals of current pulses')
-        ax = gca;
-        pos = get(ax, 'position');
-        set(ax, 'position', pos.*[1 1.5 0.9 0.85]);
-        yl = get(ax,'ylim');
-        yt = get(ax,'ytick');
-        h0 = get(ax,'children');
-        hold on
-        [ax,h1,h2] = plotyy(ax,0,0, t_pulsestart, Ia_pulse_int);
-        delete(h1)
-        set(ax(1),'ycolor',get(h0,'color'),'ylim',yl,'ytick',yt)
-        % set(h2, 'linestyle','--');
-        % set(h2, 'markerstyle','x');
-        ylabel(ax(2), 'I*t (A*s)')
-        xlabel('time (s)')
-        ylabel('I (A)')
+        % % 4 selected consecutive pulses with strange behaviour
+        % % probably not needed anymore XXX
+        % figure
+        % plot(t_pulsestart(1145:1155), Ia_pulse_int(1145:1155))
+        % ylabel('I*t (A*s)')
+        % xlabel('time (s)')
+        % title('Integral of selected current pulses')
+        % 
+        % figure
+        % hold on
+        % plot(Ia_splits{1148})
+        % plot(Ia_splits{1149})
+        % plot(Ia_splits{1150})
+        % plot(Ia_splits{1151})
+        % hold off
+        % title('Selected current pulses - 4 consecutive. Strange behaviour')
+        % legend(['pulse 1148 at time ' num2str(t_pulsestart(1148))], ...
+        %        ['pulse 1149 at time ' num2str(t_pulsestart(1149))], ...
+        %        ['pulse 1150 at time ' num2str(t_pulsestart(1150))], ...
+        %        ['pulse 1151 at time ' num2str(t_pulsestart(1151))])
+        % xlabel('time (samples), zero is arbitrary')
+        % xlabel('current (A)')
 
-        % 4 selected consecutive pulses with strange behaviour
-        % probably not needed anymore XXX
-        figure
-        plot(t_pulsestart(1145:1155), Ia_pulse_int(1145:1155))
-        ylabel('I*t (A*s)')
-        xlabel('time (s)')
-        title('Integral of selected current pulses')
+        if ~isempty(periods)
+                % time of pulse starts fitted by line
+                figure
+                hold on
+                plot(1:length(t_pulsestart), t_pulsestart, '-')
+                plot(1:length(t_pulsestart), S.yf, 'x')
+                xlabel('index')
+                ylabel('time of pulse start (s)')
+                legend('time of pulse start', 'fit line')
+                title('fitting of pulse start times')
+                saveplot(sprintf('%05d-pulse_start_times', groupindex), dirpath)
 
-        figure
-        hold on
-        plot(Ia_splits{1148})
-        plot(Ia_splits{1149})
-        plot(Ia_splits{1150})
-        plot(Ia_splits{1151})
-        hold off
-        title('Selected current pulses - 4 consecutive. Strange behaviour')
-        legend(['pulse 1148 at time ' num2str(t_pulsestart(1148))], ...
-               ['pulse 1149 at time ' num2str(t_pulsestart(1149))], ...
-               ['pulse 1150 at time ' num2str(t_pulsestart(1150))], ...
-               ['pulse 1151 at time ' num2str(t_pulsestart(1151))])
-        xlabel('time (samples), zero is arbitrary')
-        xlabel('current (A)')
+                % errors of pulse starts from ideal line
+                figure
+                plot(S.yf - t_pulsestart)
+                title('Errors of pulse starts time from ideal line fit')
+                xlabel('pulse start (s)')
+                ylabel('error from line fit (s)')
+                saveplot(sprintf('%05d-pulse_start_times-errors', groupindex), dirpath)
 
-        % time of pulse starts fitted by line
-        figure
-        hold on
-        plot(1:length(t_pulsestart), t_pulsestart, '-')
-        plot(1:length(t_pulsestart), S.yf, 'x')
-        xlabel('index')
-        ylabel('time of pulse start (s)')
-        legend('time of pulse start', 'fit line')
-        title('fitting of pulse start times')
-        xlim([0 14])
-        ylim([4.73 4.81])
-
-        % errors of pulse starts from ideal line
-        figure
-        plot(S.yf - t_pulsestart)
-        title('Errors of pulse starts time from ideal line fit')
-        xlabel('pulse start (s)')
-        ylabel('error from line fit (s)')
-
-        % energy in splits - pulses
-        figure
-        plot(t_pulsestart, Ehf_1.*sw1, 'xr', t_pulsestart, Edsfhf_1.*not(sw1), 'xb')
-        title('Energy of pulses for configuration 1')
-        xlabel('time of pulse start (s)')
-        ylabel('Energy (J)')
-endif % plotting
-
-
+                % energy in splits - pulses
+                figure
+                plot([1 t_pulsestart], Ehf_1.*sw1, 'xr', [1 t_pulsestart], Edsfhf_1.*not(sw1), 'xb')
+                title('Energy of pulses for configuration 1')
+                xlabel('time of pulse start (s)')
+                ylabel('Energy (J)')
+                saveplot(sprintf('%05d-energy_config_1', groupindex), dirpath)
+        endif
+end % plots
 
 %% --- Old unused code, stored for reference --------------------
 % plot(x./3600, (DI.y.v - vnom).*1e6, '-');
@@ -316,7 +300,7 @@ endif % plotting
 % % % move time of first peak back by half chopping period:
 % tsw0 = tsw0 - 1/fch/2;
 % 
-% % suppose all peaks are higher than triglvl!!! XXXXXXXXX
+% % suppose all peaks are higher than triglvl!!! XXX
 % Ia = [...
 %         0.*ones(1, 5)...
 %         1.*ones(1, 2)...
@@ -403,3 +387,4 @@ endif % plotting
 % hold off
 % xlim([4.72 4.9])
 
+end % function
