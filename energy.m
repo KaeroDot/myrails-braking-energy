@@ -277,7 +277,6 @@ if plots
                 y2 = Edsfhf_1.*not(sw1);
                 x2(y2 == 0) = [];
                 y2(y2 == 0) = [];
-                % plot([1 t_pulsestart], Ehf_1.*sw1, '-r', [1 t_pulsestart], Edsfhf_1.*not(sw1), '-b')
                 plot(x, y, 'xr', x2, y2, 'xb')
                 legend('Ehf_1', 'Edsfhf_1')
                 title([num2str(groupindex) ' - Energy of pulses for configuration 1'])
@@ -285,6 +284,20 @@ if plots
                 ylabel('Energy (J)')
                 saveplot(sprintf('%05d-energy_config_1', groupindex), dirpath)
                 close
+
+                % energy comparison for both configurations
+                figure
+                x = [1 t_pulsestart];
+                y = Ehf_1.*sw1 + Edsfhf_1.*not(sw1);
+                y2 = Ehf_2.*sw1 + Edsfhf_2.*not(sw1);
+                plot(x, y, '-r', x, y2, '-b', x, y2-y, '-k' )
+                legend('E_1', 'E_2', 'E_2-E_1')
+                title([num2str(groupindex) ' - Energy of pulses'])
+                xlabel('time of pulse start (s)')
+                ylabel('Energy (J)')
+                saveplot(sprintf('%05d-energy_config_1_2', groupindex), dirpath)
+                close
+
         end
 end % plots
 
