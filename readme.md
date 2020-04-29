@@ -1,7 +1,7 @@
 # Scripts for calculation of energy dissipated in braking rheostats
 Developed in the scope of MyRails project. Works in GNU Octave/Matlab. Based on the paper: *Accurate
 Measurement of Energy Dissipated in Braking Rheostats in DC Railway Systems*, Helko van den Brom,
-Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi, hvdbrom@vsl.nl
+Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 
 ## How to run
 - Make some directory with following files with measured waveforms:
@@ -18,7 +18,7 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi, hvdbrom@vsl.nl
 - Chopping frequency nor sampling frequency do not have to be exact nor precise. Braking pulses in current waveform are identified by finding starts and ends of pulses.
 - Pulses are identified by setting trigger level voltage, this voltage is found heuristically.
 - Waveforms are splitted into braking groups, New braking group is found if no braking happens for at least 1 second.
-- The energy is calculated in two ways: Vhf*Ia + (Vdsf-Vhf)*Ib, and Vhf*Ib + (Vdsf-Vhf)*Ia,
+- The energy is calculated in two ways: ```Vhf*Ia + (Vdsf-Vhf)*Ib```, and ```Vhf*Ib + (Vdsf-Vhf)*Ia```,
   alternately for every pulse.
 - Script ```calculate.m``` reports both energies.
 - Script is optimised to use more harddrive than memory so even desktop computers should be able to
