@@ -104,7 +104,7 @@ else
 
         %% --- Get safety negative time offset of pulse starts --------------------
         offset = fix(min(lengthsoff)./2);
-        disp(["\nMinimal off length is " num2str(min(lengthsoff)) ' samples, so all pulsestarts will be moved back by ' num2str(offset) ' samples.'])
+        disp([sprintf('\n') 'Minimal off length is ' num2str(min(lengthsoff)) ' samples, so all pulsestarts will be moved back by ' num2str(offset) ' samples.'])
         id_pulsestartO = id_pulsestart - offset;
         % fix first negative index:
         if id_pulsestartO(1) < 1
@@ -116,7 +116,7 @@ else
         t_pulsestartO = t(id_pulsestartO);
 
         %% --- Fit time starts by line--------------------
-        [P, S, MU] = polyfit ([1:length(t_pulsestart)], t_pulsestart, 1);
+        [P, S] = polyfit ([1:length(t_pulsestart)], t_pulsestart, 1);
         % pulse start varies easily by more than width
         % at the end some pulses are missing
 
@@ -176,8 +176,8 @@ E_2 = sum(Ehf_2.*sw1) + sum(Edsfhf_2.*not(sw1))
 disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E_2-E_1)/E_1.*100)]);
 
 
-%% --- 2DO --------------------
-% calculate average offset level
+%% --- 2DO -------------------- XXX
+% calculate average offset level?
 
 %% --- Plotting --------------------
 if plots
@@ -198,6 +198,7 @@ if plots
         % xlabel('time (s)')
         % ylabel('I (A)')
         % saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
+        % close
 
         % plot selected current pulses, so user can visually check if splitting occured correctly:
         figure
@@ -209,11 +210,12 @@ if plots
                 lens(end+1) = length(Ia_splits{i});
         end
         hold off
-        title('Selected current pulses, Ia')
+        title([num2str(groupindex) ' - Selected current pulses, Ia'])
         xlabel('time (samples), zero is arbitrary')
         ylabel('current (A)')
         xlim([1 min(lens)])
         saveplot(sprintf('%05d-selected_current_pulses_Ia', groupindex), dirpath)
+        close
 
         % % 4 selected consecutive pulses with strange behaviour
         % % probably not needed anymore XXX
@@ -237,35 +239,53 @@ if plots
         %        ['pulse 1151 at time ' num2str(t_pulsestart(1151))])
         % xlabel('time (samples), zero is arbitrary')
         % xlabel('current (A)')
+        % close
 
         if ~isempty(periods)
-                % time of pulse starts fitted by line
-                figure
-                hold on
-                plot(1:length(t_pulsestart), t_pulsestart, '-')
-                plot(1:length(t_pulsestart), S.yf, 'x')
-                xlabel('index')
-                ylabel('time of pulse start (s)')
-                legend('time of pulse start', 'fit line')
-                title('fitting of pulse start times')
-                saveplot(sprintf('%05d-pulse_start_times', groupindex), dirpath)
+                % % time of pulse starts fitted by line
+                % figure
+                % hold on
+                % plot(1:length(t_pulsestart), t_pulsestart, '-')
+                % plot(1:length(t_pulsestart), polyval(P, 1:length(t_pulsestart)), 'x')
+                % xlabel('index')
+                % ylabel('time of pulse start (s)')
+                % legend('time of pulse start', 'fit line')
+                % title('fitting of pulse start times')
+                % saveplot(sprintf('%05d-pulse_start_times', groupindex), dirpath)
 
                 % errors of pulse starts from ideal line
+                % reveals gaps between pulses
                 figure
-                plot(S.yf - t_pulsestart)
-                title('Errors of pulse starts time from ideal line fit')
+                hold on
+                plot(polyval(P, [1:length(t_pulsestart)]) - t_pulsestart, '-b')
+                plot(xlim, 0 + 0.5*[min(lengthsoff) min(lengthsoff)]./fs, 'r--');
+                plot(xlim, 0 - 0.5*[min(lengthsoff) min(lengthsoff)]./fs, 'r--');
+                legend('error', '0 - 1/2 of minimal "off" length', '0 - 1/2 of minimal "off" length')
+                title([num2str(groupindex) ' - Errors of pulse starts time from ideal line fit'])
                 xlabel('pulse start (s)')
                 ylabel('error from line fit (s)')
                 saveplot(sprintf('%05d-pulse_start_times-errors', groupindex), dirpath)
+                close
 
                 % energy in splits - pulses
                 figure
-                plot([1 t_pulsestart], Ehf_1.*sw1, 'xr', [1 t_pulsestart], Edsfhf_1.*not(sw1), 'xb')
-                title('Energy of pulses for configuration 1')
+                x = [1 t_pulsestart];
+                y = Ehf_1.*sw1;
+                x(y == 0) = [];
+                y(y == 0) = [];
+                x2 = [1 t_pulsestart];
+                y2 = Edsfhf_1.*not(sw1);
+                x2(y2 == 0) = [];
+                y2(y2 == 0) = [];
+                % plot([1 t_pulsestart], Ehf_1.*sw1, '-r', [1 t_pulsestart], Edsfhf_1.*not(sw1), '-b')
+                plot(x, y, 'xr', x2, y2, 'xb')
+                legend('Ehf_1', 'Edsfhf_1')
+                title([num2str(groupindex) ' - Energy of pulses for configuration 1'])
                 xlabel('time of pulse start (s)')
                 ylabel('Energy (J)')
                 saveplot(sprintf('%05d-energy_config_1', groupindex), dirpath)
-        endif
+                close
+        end
 end % plots
 
 %% --- Old unused code, stored for reference --------------------

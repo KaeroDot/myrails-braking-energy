@@ -31,6 +31,7 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi, hvdbrom@vsl.nl
 - Braking groups shows out a consecutive series of pulses. So for every next pulse chopping
   happened. But some braking groups shows missing braking pulses at the end of the group. I have no
   idea if one chopping or two choppping happened during missing pulse.
+- I have no idea which noise can be expected and how it can affect pulse detection.
 
 ## Assumptions
 - Break pulses appears both in Ia and Ib at +- same place.

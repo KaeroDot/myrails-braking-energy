@@ -89,8 +89,9 @@ if plots
         hold off
         xlabel('Index of Ia')
         ylabel('Braking intensity (arbitrary)')
-        title('Braking detection in braking groups and starts of groups')
+        title('Braking detection, braking groups, starts of groups')
         saveplot('braking_groups', dirpath);
+        close
 end
 
 % clear quantities not needed anymore:
@@ -121,7 +122,8 @@ for j = 1:length(varnms)
                                 % cuts variable to single group
                                 % and rename it to be consistent with the paper
                                 % and ensure row vectors:
-                                eval([varnms{j} ' = ' fnms{j} 'all(' num2str(groups_start_id(i)) ':' num2str(groups_end_id(i)) ')(:)' char(39) ';']);
+                                eval([varnms{j} ' = ' fnms{j} 'all(' num2str(groups_start_id(i)) ':' num2str(groups_end_id(i)) ');']);
+                                eval([varnms{j} ' = ' varnms{j} '(:)' char(39) ';']);
                                 save('-v7', fng{j, i}, varnms{j});
                         end
                 end
