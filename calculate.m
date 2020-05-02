@@ -10,7 +10,7 @@
 fs = 37.5e3;
 % directory with all data:
 dirpath = 'exampledata';
-dirpath = 'testdata';
+% dirpath = 'testdata';
 % make plots? (0/1);
 plots = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -115,20 +115,30 @@ end
 % load and splits for those variables and filenames that do not exist:
 for j = 1:length(varnms)
         if ~all(isfile(j, :))
-                % XXX do not load IrogA - already loaded
-                load(fullfile(dirpath, [fnms{j} '.mat']));
+                if j == 1
+                        % IrogA already loaded as Ia, just make renaming so rest of the loop can
+                        % work in the same way as for other variables;
+                        eval([fnms{j} ' = ' varnms{j} ';']);
+                        eval(['clear ' varnms{j}]);
+                else
+                        % load variable from measured data:
+                        load(fullfile(dirpath, [fnms{j} '.mat']));
+                end
+                % rename measured data to SOMETHINGall:
                 eval([fnms{j} 'all = ' fnms{j} '; clear ' fnms{j} ';']);
                 for i = 1:length(groups_start_id)
                         if ~isfile(j, i)
                                 % cuts variable to single group
-                                % and rename it to be consistent with the paper
-                                % and ensure row vectors:
+                                % rename it to be consistent with the paper
                                 eval([varnms{j} ' = ' fnms{j} 'all(' num2str(groups_start_id(i)) ':' num2str(groups_end_id(i)) ');']);
+                                % ensure row vectors:
                                 eval([varnms{j} ' = ' varnms{j} '(:)' char(39) ';']);
+                                % save variable into file:
                                 save('-v7', fng{j, i}, varnms{j});
                         end
                 end
                 eval(['clear ' varnms{j}]);
+                eval(['clear ' fnms{j} 'all']);
         end
 end
 

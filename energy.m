@@ -189,25 +189,25 @@ disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E_1-E_2)/E_2.*100)]
 %% --- Plotting --------------------
 if plots
         disp('Plotting...')
-        % plot current with lines showing splitting - this is figure challenging the hardware, use only if
-        % needed!
-        if ~isempty(periods)
-                figure
-                hold on
-                x = repmat(t_pulsestartO, 2, 1);
-                yl = [min(Ia) max(Ia)];
-                y = repmat(yl', 1, length(t_pulsestartO));
-                for i = 1:length(t_pulsestartO)
-                        plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
-                end
-                plot(t, Ia, '-b')
-                hold off
-                title('Current waveform')
-                xlabel('time (s)')
-                ylabel('I (A)')
-                saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
-                close
-        endif
+        % % plot current with lines showing splitting - this is figure challenging the hardware, use only if
+        % % needed!
+        % if ~isempty(periods)
+        %         figure
+        %         hold on
+        %         x = repmat(t_pulsestartO, 2, 1);
+        %         yl = [min(Ia) max(Ia)];
+        %         y = repmat(yl', 1, length(t_pulsestartO));
+        %         for i = 1:length(t_pulsestartO)
+        %                 plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
+        %         end
+        %         plot(t, Ia, '-b')
+        %         hold off
+        %         title('Current waveform')
+        %         xlabel('time (s)')
+        %         ylabel('I (A)')
+        %         saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
+        %         close
+        % endif
 
         % plot selected current pulses, so user can visually check if splitting occured correctly:
         figure

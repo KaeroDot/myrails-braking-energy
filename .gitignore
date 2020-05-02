@@ -17,3 +17,4 @@ exampledata/Vhf-00001.mat
 exampledata/Vhf-00002.mat
 exampledata/Vhf-00003.mat
 exampledata/Vhf-00004.mat
+exampledata/*.plt
