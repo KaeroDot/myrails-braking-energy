@@ -150,31 +150,38 @@ else
 end
 
 % multiply current and voltage for configuration 1 (a*hf, b*dsfhf)
-Phf_1 = Ia.*Vhf;
-Pdsfhf_1 = Ib.*Vdsfhf;
-% split power waveforms
-Phf_1_splits = arrayfun( @(r1,r2) Phf_1(r1:r2), splitidx1, splitidx2, 'uni', false );
-Pdsfhf_1_splits = arrayfun( @(r1,r2) Phf_1(r1:r2), splitidx1, splitidx2, 'uni', false );
-% calculate energy in every pulse:
-Ehf_1 = 1./fs.*cellfun(@trapz, Phf_1_splits, 'uni', true);
-Edsfhf_1 = 1./fs.*cellfun(@trapz, Pdsfhf_1_splits, 'uni', true);
-% calculate total energy for configuration 1 (a*hf, b*dsfhf):
-E_1 = sum(Ehf_1.*sw1) + sum(Edsfhf_1.*not(sw1))
 
-% multiply current and voltage for configuration 2 (b*hf, a*dsfhf)
-Phf_2 = Ib.*Vhf;
-Pdsfhf_2 = Ia.*Vdsfhf;
+%         P_1:   Ia*Vhf               Ia*Vhf
+%                Ib*Vdsf-Vhf          Ib*Vdsf-Vhf
+%                       Ia*Vdsf-Vhf
+%                       Ib*Vhf
+%
+%         P_2:   Ia*Vdsf-Vhf
+%                Ib*Vhf
+%                    +
+%                       Ia*Vhf
+%                       Ib*Vdsf-Vhf
+
+Phf_a    = Ia.*Vhf;
+Phf_b    = Ib.*Vhf;
+Pdsfhf_a = Ia.*Vdsfhf;
+Pdsfhf_b = Ib.*Vdsfhf;
 % split power waveforms
-Phf_2_splits = arrayfun( @(r1,r2) Phf_2(r1:r2), splitidx1, splitidx2, 'uni', false );
-Pdsfhf_2_splits = arrayfun( @(r1,r2) Phf_2(r1:r2), splitidx1, splitidx2, 'uni', false );
+Phf_a_splits    = arrayfun( @(r1,r2) Phf_a(r1:r2),    splitidx1, splitidx2, 'uni', false );
+Phf_b_splits    = arrayfun( @(r1,r2) Phf_b(r1:r2),    splitidx1, splitidx2, 'uni', false );
+Pdsfhf_a_splits = arrayfun( @(r1,r2) Pdsfhf_a(r1:r2), splitidx1, splitidx2, 'uni', false );
+Pdsfhf_b_splits = arrayfun( @(r1,r2) Pdsfhf_b(r1:r2), splitidx1, splitidx2, 'uni', false );
 % calculate energy in every pulse:
-Ehf_2 = 1./fs.*cellfun(@trapz, Phf_2_splits, 'uni', true);
-Edsfhf_2 = 1./fs.*cellfun(@trapz, Pdsfhf_2_splits, 'uni', true);
-% calculate total energy for configuration 1 (b*hf, a*dsfhf):
-E_2 = sum(Ehf_2.*sw1) + sum(Edsfhf_2.*not(sw1))
+Ehf_a    = 1./fs.*cellfun(@trapz, Phf_a_splits,    'uni', true);
+Ehf_b    = 1./fs.*cellfun(@trapz, Phf_b_splits,    'uni', true);
+Edsfhf_a = 1./fs.*cellfun(@trapz, Pdsfhf_a_splits, 'uni', true);
+Edsfhf_b = 1./fs.*cellfun(@trapz, Pdsfhf_b_splits, 'uni', true);
+% calculate total energy for configuration 1 (a*hf, b*dsfhf):
+E_1 = sum(Ehf_a.*sw1) + sum(Edsfhf_b.*sw1) + sum(Edsfhf_a.*not(sw1)) + sum(Ehf_b.*not(sw1))
+E_2 = sum(Edsfhf_a.*sw1) + sum(Ehf_b.*sw1) + sum(Ehf_a.*not(sw1)) + sum(Edsfhf_b.*not(sw1))
 
 disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E_2-E_1)/E_1.*100)]);
-
+disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E_1-E_2)/E_2.*100)]);
 
 %% --- 2DO -------------------- XXX
 % calculate average offset level?
@@ -182,23 +189,25 @@ disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E_2-E_1)/E_1.*100)]
 %% --- Plotting --------------------
 if plots
         disp('Plotting...')
-        % % plot current with lines showing splitting - this is figure challenging the hardware, use only if
-        % % needed!
-        % figure
-        % hold on
-        % x = repmat(t_pulsestartO, 2, 1);
-        % yl = [min(Ia) max(Ia)];
-        % y = repmat(yl', 1, length(t_pulsestartO));
-        % for i = 1:length(t_pulsestartO)
-        %         plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
-        % end
-        % plot(t_pulsestart, Ia, '-b')
-        % hold off
-        % title('Current waveform')
-        % xlabel('time (s)')
-        % ylabel('I (A)')
-        % saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
-        % close
+        % plot current with lines showing splitting - this is figure challenging the hardware, use only if
+        % needed!
+        if ~isempty(periods)
+                figure
+                hold on
+                x = repmat(t_pulsestartO, 2, 1);
+                yl = [min(Ia) max(Ia)];
+                y = repmat(yl', 1, length(t_pulsestartO));
+                for i = 1:length(t_pulsestartO)
+                        plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
+                end
+                plot(t, Ia, '-b')
+                hold off
+                title('Current waveform')
+                xlabel('time (s)')
+                ylabel('I (A)')
+                saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
+                close
+        endif
 
         % plot selected current pulses, so user can visually check if splitting occured correctly:
         figure
@@ -270,32 +279,32 @@ if plots
                 % energy in splits - pulses
                 figure
                 x = [1 t_pulsestart];
-                y = Ehf_1.*sw1;
+                y = Ehf_a.*sw1;
                 x(y == 0) = [];
                 y(y == 0) = [];
                 x2 = [1 t_pulsestart];
-                y2 = Edsfhf_1.*not(sw1);
+                y2 = Edsfhf_a.*not(sw1);
                 x2(y2 == 0) = [];
                 y2(y2 == 0) = [];
                 plot(x, y, 'xr', x2, y2, 'xb')
-                legend('Ehf_1', 'Edsfhf_1')
-                title([num2str(groupindex) ' - Energy of pulses for configuration 1'])
+                legend('Ehf_a', 'Edsfhf_a')
+                title([num2str(groupindex) ' - Energy of pulses, current a, for configuration 1'])
                 xlabel('time of pulse start (s)')
                 ylabel('Energy (J)')
-                saveplot(sprintf('%05d-energy_config_1', groupindex), dirpath)
+                saveplot(sprintf('%05d-energy_a_config_1', groupindex), dirpath)
                 close
 
                 % energy comparison for both configurations
                 figure
                 x = [1 t_pulsestart];
-                y = Ehf_1.*sw1 + Edsfhf_1.*not(sw1);
-                y2 = Ehf_2.*sw1 + Edsfhf_2.*not(sw1);
+                y = Ehf_a.*sw1 + Edsfhf_a.*not(sw1);
+                y2 = Edsfhf_a.*sw1 + Ehf_a.*not(sw1);
                 plot(x, y, '-r', x, y2, '-b', x, y2-y, '-k' )
                 legend('E_1', 'E_2', 'E_2-E_1')
-                title([num2str(groupindex) ' - Energy of pulses'])
+                title([num2str(groupindex) ' - Energy of pulses, current a'])
                 xlabel('time of pulse start (s)')
                 ylabel('Energy (J)')
-                saveplot(sprintf('%05d-energy_config_1_2', groupindex), dirpath)
+                saveplot(sprintf('%05d-energy_a_config_1_2', groupindex), dirpath)
                 close
 
         end

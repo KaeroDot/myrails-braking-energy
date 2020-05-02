@@ -10,6 +10,7 @@
 fs = 37.5e3;
 % directory with all data:
 dirpath = 'exampledata';
+dirpath = 'testdata';
 % make plots? (0/1);
 plots = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -144,3 +145,5 @@ disp([' === estimates for total data  ===']);
 disp(['Total energy 1: ' num2str(sum(E_1)) ' J, total energy 2: ' num2str(sum(E_2)) ' J.']);
 disp(['Error between two energies (E2-E1)/E2 (%):']);
 (sum(E_2)-sum(E_1))./sum(E_1).*100
+disp(['Error between two energies (E1-E2)/E1 (%):']);
+(sum(E_1)-sum(E_2))./sum(E_2).*100
