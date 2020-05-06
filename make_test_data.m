@@ -8,9 +8,10 @@
 % - additional offset current added to whole data
 %
 % variables IrogA, IrogB, Vdwnf, Vhf
-% total energy:
-% E_1 
-% E_2 
+% total energy of pulses:
+% E 
+% total energy of offset:
+% Eo
 %
 % Current (Ia and Ib):
 %

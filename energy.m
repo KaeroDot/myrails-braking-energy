@@ -1,5 +1,5 @@
 %% === Calculate energy of a braking sequence ====================
-function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plots);
+function [E] = energy(groupindex, fs, triglvl, dirpath, plots);
 
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
 % generate all filenames
@@ -177,11 +177,11 @@ Ehf_b    = 1./fs.*cellfun(@trapz, Phf_b_splits,    'uni', true);
 Edsfhf_a = 1./fs.*cellfun(@trapz, Pdsfhf_a_splits, 'uni', true);
 Edsfhf_b = 1./fs.*cellfun(@trapz, Pdsfhf_b_splits, 'uni', true);
 % calculate total energy for configuration 1 (a*hf, b*dsfhf):
-E_1 = sum(Ehf_a.*sw1) + sum(Edsfhf_b.*sw1) + sum(Edsfhf_a.*not(sw1)) + sum(Ehf_b.*not(sw1))
-E_2 = sum(Edsfhf_a.*sw1) + sum(Ehf_b.*sw1) + sum(Ehf_a.*not(sw1)) + sum(Edsfhf_b.*not(sw1))
+E(1,1) = sum(Ehf_a.*sw1) + sum(Edsfhf_b.*sw1) + sum(Edsfhf_a.*not(sw1)) + sum(Ehf_b.*not(sw1));
+E(2,1) = sum(Edsfhf_a.*sw1) + sum(Ehf_b.*sw1) + sum(Ehf_a.*not(sw1)) + sum(Edsfhf_b.*not(sw1));
 
-disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E_2-E_1)/E_1.*100)]);
-disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E_1-E_2)/E_2.*100)]);
+disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
+disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
 
 %% --- 2DO -------------------- XXX
 % calculate average offset level?

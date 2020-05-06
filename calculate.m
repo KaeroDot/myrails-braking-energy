@@ -5,14 +5,18 @@
 % Helko van den Brom, Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 % hvdbrom@vsl.nl
 
+clear all;
+
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%
 % sampling frequency (Hz):
 fs = 37.5e3;
 % directory with all data:
-dirpath = 'exampledata';
-% dirpath = 'testdata';
-% make plots? (0/1);
+% dirpath = 'exampledata';
+dirpath = 'testdata';
+% make plots? (0/1):
 plots = 1;
+% rewrite splitted data? (can take long time, has no sense if this script is not changed):
+rewrite = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% --- Load data --------------------
@@ -46,7 +50,8 @@ NN(max1id) = 0;
 max2id = max2id(1);
 % trigger level as half distance between two most common voltage levels:
 triglvl = abs(XX(max2id) - XX(max1id))./2;
-% braking waveform, contains only 0, 1 %XXXXXXXXXXXx what about IrogB?
+% braking waveform, contains only 0, 1
+% script suppose Ib has the same triglvl and the same position of pulses
 braking = Ia > triglvl;
 
 %% --- Find braking groups --------------------
@@ -112,6 +117,11 @@ for j = 1:length(varnms)
         end
 end
 
+% rewrite of splitted data overridden?
+if rewrite
+        isfile = isfile.*0;
+end
+
 % load and splits for those variables and filenames that do not exist:
 for j = 1:length(varnms)
         if ~all(isfile(j, :))
@@ -143,17 +153,24 @@ for j = 1:length(varnms)
 end
 
 %% --- Calculate energy for individual groups --------------------
-E_1 = zeros(size(groups_start_id));
-E_2 = zeros(size(groups_start_id));
+E = zeros(2, size(groups_start_id));
+EN = zeros(2, size(groups_start_id));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
-        % function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plotting);
-        [E_1(i) E_2(i)] = energy(i, fs, triglvl, dirpath, plots);
+        % % function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plotting);
+        [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
+        % [E(1,i) E(2,i) EN(1,i) EN(2,i)] = energy2(i, fs, triglvl, dirpath, plots);
 end
 
+%% --- Calculate total energy --------------------
 disp([' === estimates for total data  ===']);
-disp(['Total energy 1: ' num2str(sum(E_1)) ' J, total energy 2: ' num2str(sum(E_2)) ' J.']);
-disp(['Error between two energies (E2-E1)/E2 (%):']);
-(sum(E_2)-sum(E_1))./sum(E_1).*100
-disp(['Error between two energies (E1-E2)/E1 (%):']);
-(sum(E_1)-sum(E_2))./sum(E_2).*100
+% get all possibilities of EN_1 and EN_2
+% (i.e. all possible combinations of setups in braking groups. We do not know which combination is
+% correct one, so lets calculate mean and std)
+% permutations with repetitions:
+E = sum(permrep(E), 2);
+disp(['Braking energy: (' num2str(mean(E)) ' +- ' num2str(std(E)) ') J (' num2str(std(E)./mean(E).*100) ' %).']);
+% % do the same for energy of noise:
+% EN = sum(permrep([EN_1; EN_2]), 2);
+% disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
+% disp(['Noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);
