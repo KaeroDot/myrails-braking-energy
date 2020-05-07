@@ -11,15 +11,15 @@ clear all;
 % sampling frequency (Hz):
 fs = 37.5e3;
 % directory with all data:
-% dirpath = 'exampledata';
-dirpath = 'testdata';
+dirpath = 'exampledata';
+% dirpath = 'testdata';
 % make plots? (0/1):
-plots = 1;
+plots = 0;
 % rewrite splitted data? (can take long time, has no sense if this script is not changed):
-rewrite = 0;
+rewrite = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% --- Load data --------------------
+%% --- Load data -------------------- %<<<1
 % load example data
 %       Based on readme.txt in directory "Alessandria-Novara-01-25-19-7.40pm"
 %       Vupf= Upstream filter Voltage (Pantograph Voltage)
@@ -35,7 +35,7 @@ load(fullfile(dirpath, 'IrogA.mat'));
 Ia = IrogA(:)';
 clear IrogA;
 
-%% --- Trigger level --------------------
+%% --- Trigger level -------------------- %<<<1
 % get trigger level as a middle of two histogram maxima. Hopefully it is more noise resistant than
 % taking half of maximum voltage.
 % histogram:
@@ -54,14 +54,36 @@ triglvl = abs(XX(max2id) - XX(max1id))./2;
 % script suppose Ib has the same triglvl and the same position of pulses
 braking = Ia > triglvl;
 
-%% --- Find braking groups --------------------
+%% --- Find braking groups -------------------- %<<<1
 % A group of braking ends if no breaking for at least 1 second long.
 % Reshape current into groups 1 seconds long and find indexes of groups when braking
 % starts/stops.
 
 % group duration in seconds:
 group_duration = 1;
-% number of samples in a group:
+% number of samples in a group:% make plots? (0/1):
+plots = 1;
+% rewrite splitted data? (can take long time, has no sense if this script is not changed):
+rewrite = 0;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% --- Load data -------------------- %<<<1
+% load example data
+%       Based on readme.txt in directory "Alessandria-Novara-01-25-19-7.40pm"
+%       Vupf= Upstream filter Voltage (Pantograph Voltage)
+%       Vdwnf = Downstream filter Voltage
+%       Vhf = Voltage between the rheostat at lowest voltage  and ground
+%       Ip = Pantograph current
+%       HopA = Current in highest rheostat measured with an HOP800 transducer
+%       HopB = Current in lowest rheostat measured with an HOP800 transducer
+%       IrogA = Current in highest rheostat measured with a Rogowski coil transducer
+%       IrogB = Current in lowest rheostat measured with a Rogowski coil transducer
+% loaded quantities are renamed to naming used in paper
+load(fullfile(dirpath, 'IrogA.mat'));
+Ia = IrogA(:)';
+clear IrogA;
+
+
 group_samples = fix(group_duration.*fs);
 % reshape braking into matrix, one column contain samples of one group:
 len = fix(size(braking,2)./group_samples);
@@ -83,19 +105,20 @@ groups_start_id = groups_start.*group_samples - group_samples;
 groups_end_id = [groups_start_id length(braking)];
 groups_start_id = [1 groups_start_id];
 
-%% --- Plot braking groups --------------------
+%% --- Plot braking groups -------------------- %<<<1
 if plots
         figure
         hold on
         plot(groupsids, groups)
         yl = ylim;
-        for i = 1:length(groups_start_id)
-                plot([groups_start_id(i) groups_start_id(i)], yl)
-        end
+        xtmp =  repmat(groups_start_id, 2, 1);
+        ytmp = repmat(yl', 1, size(groups_start_id, 2));
+        plot(xtmp, ytmp, '-r');
         hold off
-        xlabel('Index of Ia')
-        ylabel('Braking intensity (arbitrary)')
-        title('Braking detection, braking groups, starts of groups')
+        legend('braking', 'group start')
+        xlabel('time (samples)')
+        ylabel('braking intensity based on Ia (arbitrary)')
+        title('Braking detection, braking groups')
         saveplot('braking_groups', dirpath);
         close
 end
@@ -103,7 +126,7 @@ end
 % clear quantities not needed anymore:
 clear braking;
 
-%% --- Divide data into groups and save data as new files --------------------
+%% --- Divide data into groups and save data as new files -------------------- %<<<1
 % filenames to process:
 fnms = {'IrogA', 'IrogB', 'Vdwnf', 'Vhf'}; % IrogA is already loaded as Ia
 % variables to process (paper use different variable names than measured files)
@@ -152,25 +175,25 @@ for j = 1:length(varnms)
         end
 end
 
-%% --- Calculate energy for individual groups --------------------
+%% --- Calculate energy for individual groups -------------------- %<<<1
 E = zeros(2, size(groups_start_id));
 EN = zeros(2, size(groups_start_id));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
-        % % function [E_1 E_2] = energy(groupindex, fs, triglvl, dirpath, plotting);
-        [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
-        % [E(1,i) E(2,i) EN(1,i) EN(2,i)] = energy2(i, fs, triglvl, dirpath, plots);
+        % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
+        [E(:,i) EN(:,i)] = energy2(i, fs, triglvl, dirpath, plots);
 end
 
-%% --- Calculate total energy --------------------
+%% --- Calculate total energy -------------------- %<<<1
+disp([' =================================']);
 disp([' === estimates for total data  ===']);
-% get all possibilities of EN_1 and EN_2
+% get all possibilities of E_1 and E_2
 % (i.e. all possible combinations of setups in braking groups. We do not know which combination is
 % correct one, so lets calculate mean and std)
 % permutations with repetitions:
 E = sum(permrep(E), 2);
 disp(['Braking energy: (' num2str(mean(E)) ' +- ' num2str(std(E)) ') J (' num2str(std(E)./mean(E).*100) ' %).']);
-% % do the same for energy of noise:
-% EN = sum(permrep([EN_1; EN_2]), 2);
-% disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
-% disp(['Noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);
+% do the same for energy of noise:
+EN = sum(permrep(EN), 2);
+disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
+disp(['Noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);

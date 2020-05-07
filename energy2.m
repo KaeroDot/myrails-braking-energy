@@ -1,5 +1,5 @@
 %% === Calculate energy of a braking sequence ====================
-function [E] = energy(groupindex, fs, triglvl, dirpath, plots);
+function [E EN] = energy2(groupindex, fs, triglvl, dirpath, plots);
 
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
 % generate all filenames
@@ -52,12 +52,18 @@ periods = diff(id_pulsestart);
 
 % display various info
 disp(['Length of signal: ' num2str(length(Ia)) ' samples, duration: ' num2str(length(Ia)./fs) ' s.'])
+disp(sprintf('Ia: mean: %g A, std: %g A.', mean(Ia), std(Ia)))
+disp(sprintf('Ib: mean: %g A, std: %g A.', mean(Ib), std(Ib)))
+disp(sprintf('Vhf: mean: %g V, std: %g V.', mean(Vhf), std(Vhf)))
+disp(sprintf('Vdsf: mean: %g V, std: %g V.', mean(Vdsf), std(Vdsf)))
 if isempty(periods)
         disp('No detected pulses. Only noise data');
         id_pulsestart = 1;
         id_pulsestartO = 1;
         splitidx1 = 1;
         splitidx2 = length(Ia);
+        splitidx1N = 1;
+        splitidx2N = length(Ia);
 else
         disp('Current Ia:')
         disp(['off lengths in samples: ' ...
@@ -104,8 +110,8 @@ else
                 ', max=' num2str(max(periods)./fs*1000)])
 
         %% --- Get safety negative time offset of pulse starts -------------------- %<<<2
-        offset = fix(min(lengthsoff)./2);
-        disp(['Minimal off length is ' num2str(min(lengthsoff)) ' samples. All pulsestarts will be moved back by ' num2str(offset) ' samples.'])
+        offset = 3; % XXX arbitrary number!
+        disp(['Minimal off length is ' num2str(min(lengthsoff)) ' samples. All pulsestarts will be moved back by ' num2str(offset) ' samples. All pulseends will be moved forward by ' num2str(offset) ' samples.'])
         id_pulsestartO = id_pulsestart - offset;
         % fix first negative index:
         if id_pulsestartO(1) < 1
@@ -116,38 +122,57 @@ else
         t_pulsestart = t(id_pulsestart);
         t_pulsestartO = t(id_pulsestartO);
 
+        id_pulseendO = id_pulseend + offset;
+        % fix last too big index:
+        if id_pulseendO(end) > length(slopes)
+                id_pulseendO(end) = length(slopes);
+        end
+        % XXX now here could be some overlap
+        t_pulseend = t(id_pulseend);
+        t_pulseendO = t(id_pulseendO);
+
         %% --- Fit time starts by line-------------------- %<<<2
         [P, S] = polyfit ([1:length(t_pulsestart)], t_pulsestart, 1);
         % pulse start varies easily by more than width
         % at the end some pulses are missing
 
-        % indexes where split will happen:
+        % indexes where split for pulses will happen:
         splitidx1 = id_pulsestartO; % index of start of split
-        splitidx2 = splitidx1;             % index of end of split
-        % add index for start of waveform:
-        splitidx1 = [1 splitidx1];
-        % add index for end of waveform:
-        splitidx2(end+1) = length(Ia);
+        splitidx2 = id_pulseendO;             % index of end of split
+
+        % indexes where split for noise will happen:
+        % add index for start of noise sections:
+        splitidx1N = [1 id_pulseendO];
+        % add index for end of noise sections:
+        splitidx2N = [id_pulsestartO length(slopes)];
 end
 
-%% --- Split signal into individual current and nocurrent pulses --------------------
-disp('Splitting signal...')
-
-% make split:
-Ia_splits = arrayfun( @(r1,r2) Ia(r1:r2), splitidx1, splitidx2, 'uni', false );
-Ib_splits = arrayfun( @(r1,r2) Ib(r1:r2), splitidx1, splitidx2, 'uni', false );
-Vhf_splits = arrayfun( @(r1,r2) Vhf(r1:r2), splitidx1, splitidx2, 'uni', false );
-Vdsfhf_splits = arrayfun( @(r1,r2) Vdsfhf(r1:r2), splitidx1, splitidx2, 'uni', false );
+%% --- Split signal into individual current and nocurrent pulses -------------------- %<<<1
+if ~isempty(periods)
+        Ia_splits = arrayfun( @(r1,r2) Ia(r1:r2), splitidx1, splitidx2, 'uni', false );
+        Ib_splits = arrayfun( @(r1,r2) Ib(r1:r2), splitidx1, splitidx2, 'uni', false );
+        Vhf_splits = arrayfun( @(r1,r2) Vhf(r1:r2), splitidx1, splitidx2, 'uni', false );
+        Vdsfhf_splits = arrayfun( @(r1,r2) Vdsfhf(r1:r2), splitidx1, splitidx2, 'uni', false );
+end
+% noise data:
+IaN_splits = arrayfun( @(r1,r2) Ia(r1:r2), splitidx1N, splitidx2N, 'uni', false );
+IbN_splits = arrayfun( @(r1,r2) Ib(r1:r2), splitidx1N, splitidx2N, 'uni', false );
+VhfN_splits = arrayfun( @(r1,r2) Vhf(r1:r2), splitidx1N, splitidx2N, 'uni', false );
+VdsfhfN_splits = arrayfun( @(r1,r2) Vdsfhf(r1:r2), splitidx1N, splitidx2N, 'uni', false );
 
 %% --- Calculate power and energy -------------------- %<<<1
 if isempty(periods)
         sw1 = 1;
+        sw1N = 1;
 else
         % prepare indexing vectors for two powers 
         % i.e. make series 1,0,1,0,... (based on square.m from statistics package):
         sw1 = [1:length(splitidx1)];
         sw1 = 0.5*sw1;
         sw1 = (sw1 - floor(sw1)>=0.5);
+        sw1N = [1:length(splitidx1N)];
+        sw1N = 0.5*sw1N;
+        sw1N = (sw1N - floor(sw1N)>=0.5);
 end
 
 % multiply current and voltage for configuration 1 (a*hf, b*dsfhf)
@@ -167,22 +192,48 @@ Phf_a    = Ia.*Vhf;
 Phf_b    = Ib.*Vhf;
 Pdsfhf_a = Ia.*Vdsfhf;
 Pdsfhf_b = Ib.*Vdsfhf;
-% split power waveforms
-Phf_a_splits    = arrayfun( @(r1,r2) Phf_a(r1:r2),    splitidx1, splitidx2, 'uni', false );
-Phf_b_splits    = arrayfun( @(r1,r2) Phf_b(r1:r2),    splitidx1, splitidx2, 'uni', false );
-Pdsfhf_a_splits = arrayfun( @(r1,r2) Pdsfhf_a(r1:r2), splitidx1, splitidx2, 'uni', false );
-Pdsfhf_b_splits = arrayfun( @(r1,r2) Pdsfhf_b(r1:r2), splitidx1, splitidx2, 'uni', false );
+if ~isempty(periods)
+        % split power waveforms
+        Phf_a_splits    = arrayfun( @(r1,r2) Phf_a(r1:r2),    splitidx1, splitidx2, 'uni', false );
+        Phf_b_splits    = arrayfun( @(r1,r2) Phf_b(r1:r2),    splitidx1, splitidx2, 'uni', false );
+        Pdsfhf_a_splits = arrayfun( @(r1,r2) Pdsfhf_a(r1:r2), splitidx1, splitidx2, 'uni', false );
+        Pdsfhf_b_splits = arrayfun( @(r1,r2) Pdsfhf_b(r1:r2), splitidx1, splitidx2, 'uni', false );
+end
+PhfN_a_splits    = arrayfun( @(r1,r2) Phf_a(r1:r2),    splitidx1N, splitidx2N, 'uni', false );
+PhfN_b_splits    = arrayfun( @(r1,r2) Phf_b(r1:r2),    splitidx1N, splitidx2N, 'uni', false );
+PdsfhfN_a_splits = arrayfun( @(r1,r2) Pdsfhf_a(r1:r2), splitidx1N, splitidx2N, 'uni', false );
+PdsfhfN_b_splits = arrayfun( @(r1,r2) Pdsfhf_b(r1:r2), splitidx1N, splitidx2N, 'uni', false );
 % calculate energy in every pulse:
-Ehf_a    = 1./fs.*cellfun(@trapz, Phf_a_splits,    'uni', true);
-Ehf_b    = 1./fs.*cellfun(@trapz, Phf_b_splits,    'uni', true);
-Edsfhf_a = 1./fs.*cellfun(@trapz, Pdsfhf_a_splits, 'uni', true);
-Edsfhf_b = 1./fs.*cellfun(@trapz, Pdsfhf_b_splits, 'uni', true);
-% calculate total energy for configuration 1 (a*hf, b*dsfhf):
-E(1,1) = sum(Ehf_a.*sw1) + sum(Edsfhf_b.*sw1) + sum(Edsfhf_a.*not(sw1)) + sum(Ehf_b.*not(sw1));
-E(2,1) = sum(Edsfhf_a.*sw1) + sum(Ehf_b.*sw1) + sum(Ehf_a.*not(sw1)) + sum(Edsfhf_b.*not(sw1));
-
-disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
-disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
+if ~isempty(periods)
+        Ehf_a    = 1./fs.*cellfun(@trapz, Phf_a_splits,    'uni', true);
+        Ehf_b    = 1./fs.*cellfun(@trapz, Phf_b_splits,    'uni', true);
+        Edsfhf_a = 1./fs.*cellfun(@trapz, Pdsfhf_a_splits, 'uni', true);
+        Edsfhf_b = 1./fs.*cellfun(@trapz, Pdsfhf_b_splits, 'uni', true);
+end
+EhfN_a    = 1./fs.*cellfun(@trapz, PhfN_a_splits,    'uni', true);
+EhfN_b    = 1./fs.*cellfun(@trapz, PhfN_b_splits,    'uni', true);
+EdsfhfN_a = 1./fs.*cellfun(@trapz, PdsfhfN_a_splits, 'uni', true);
+EdsfhfN_b = 1./fs.*cellfun(@trapz, PdsfhfN_b_splits, 'uni', true);
+% calculate total energy for both configurations (a*hf, b*dsfhf):
+if ~isempty(periods)
+        E(1,1) = sum(Ehf_a.*sw1) + sum(Edsfhf_b.*sw1) + sum(Edsfhf_a.*not(sw1)) + sum(Ehf_b.*not(sw1));
+        E(2,1) = sum(Edsfhf_a.*sw1) + sum(Ehf_b.*sw1) + sum(Ehf_a.*not(sw1)) + sum(Edsfhf_b.*not(sw1));
+        disp(['Energy configuration 1: ' num2str(E(1)) ' J, configuration 2: ' num2str(E(2)) ' J.']);
+        disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
+        disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
+else
+        E(1,1) = 0;
+        E(2,1) = 0;
+end
+EN(1,1) = sum(EhfN_a.*sw1N) + sum(EdsfhfN_b.*sw1N) + sum(EdsfhfN_a.*not(sw1N)) + sum(EhfN_b.*not(sw1N));
+EN(2,1) = sum(EdsfhfN_a.*sw1N) + sum(EhfN_b.*sw1N) + sum(EhfN_a.*not(sw1N)) + sum(EdsfhfN_b.*not(sw1N));
+disp(['Energy of noise configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
+disp(['Error between two energies of noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
+disp(['Error between two energies of noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
+if ~isempty(periods)
+        disp(['Noise 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total energy 1.']);
+        disp(['Noise 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total energy 2.']);
+end
 
 %% --- 2DO -------------------- XXX %<<<1
 % calculate average offset level?
@@ -199,6 +250,11 @@ if plots
                 y = repmat(yl', 1, length(t_pulsestartO));
                 for i = 1:length(t_pulsestartO)
                         plot([t_pulsestartO(i) t_pulsestartO(i)], yl, '-r')
+                end
+                x = repmat(t_pulseendO, 2, 1);
+                y = repmat(yl', 1, length(t_pulseendO));
+                for i = 1:length(t_pulseendO)
+                        plot([t_pulseendO(i) t_pulseendO(i)], yl, '-g')
                 end
                 title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A\nred: pulse start, green: pulse end', groupindex, mean(Ia), std(Ia)))
         else
@@ -245,11 +301,11 @@ if plots
 
                 % energy in splits - pulses
                 figure
-                x = [1 t_pulsestart];
+                x = t_pulsestart;
                 y = Ehf_a.*sw1;
                 x(y == 0) = [];
                 y(y == 0) = [];
-                x2 = [1 t_pulsestart];
+                x2 = t_pulsestart;
                 y2 = Edsfhf_a.*not(sw1);
                 x2(y2 == 0) = [];
                 y2(y2 == 0) = [];
@@ -263,7 +319,7 @@ if plots
 
                 % energy comparison for both configurations
                 figure
-                x = [1 t_pulsestart];
+                x = t_pulsestart;
                 y = Ehf_a.*sw1 + Edsfhf_a.*not(sw1);
                 y2 = Edsfhf_a.*sw1 + Ehf_a.*not(sw1);
                 plot(x, y, '-r', x, y2, '-b', x, y2-y, '-k' )
