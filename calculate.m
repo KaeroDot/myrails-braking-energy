@@ -14,7 +14,7 @@ fs = 37.5e3;
 dirpath = 'exampledata';
 % dirpath = 'testdata';
 % make plots? (0/1):
-plots = 0;
+plots = 1;
 % rewrite splitted data? (can take long time, has no sense if this script is not changed):
 rewrite = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -61,28 +61,6 @@ braking = Ia > triglvl;
 
 % group duration in seconds:
 group_duration = 1;
-% number of samples in a group:% make plots? (0/1):
-plots = 1;
-% rewrite splitted data? (can take long time, has no sense if this script is not changed):
-rewrite = 0;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% --- Load data -------------------- %<<<1
-% load example data
-%       Based on readme.txt in directory "Alessandria-Novara-01-25-19-7.40pm"
-%       Vupf= Upstream filter Voltage (Pantograph Voltage)
-%       Vdwnf = Downstream filter Voltage
-%       Vhf = Voltage between the rheostat at lowest voltage  and ground
-%       Ip = Pantograph current
-%       HopA = Current in highest rheostat measured with an HOP800 transducer
-%       HopB = Current in lowest rheostat measured with an HOP800 transducer
-%       IrogA = Current in highest rheostat measured with a Rogowski coil transducer
-%       IrogB = Current in lowest rheostat measured with a Rogowski coil transducer
-% loaded quantities are renamed to naming used in paper
-load(fullfile(dirpath, 'IrogA.mat'));
-Ia = IrogA(:)';
-clear IrogA;
-
 
 group_samples = fix(group_duration.*fs);
 % reshape braking into matrix, one column contain samples of one group:

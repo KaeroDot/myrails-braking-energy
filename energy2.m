@@ -8,6 +8,13 @@ for j = 1:length(varnms)
         load(fng{j});
 end
 
+% %%%%%%XXX
+% % remove offset - just test XXX
+% current_offset_a = mean(Ia(1:1000))
+% current_offset_b = mean(Ib(1:1000))
+% Ia = Ia - current_offset_a;
+% Ib = Ib - current_offset_b;
+% 
 %% --- Other required quantities -------------------- %<<<1
 % time axis:
 t = [1:length(Ia)]./fs - 1/fs;
