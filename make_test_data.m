@@ -49,6 +49,10 @@ Vdsf_lvl = 4000; % V
 Vhf_lvl = 1800; % V
 % current offset (simulates nonzero current):
 Io_lvl = 0.001; % A
+% Therefore:
+% Energy: U*I*t
+% Energy of for single pulse: 1800*1000*5/37.5e3 + 2200*1100*5/37.5 = 240 + 322.66 = 562.66 J (557.33 J for second configuration)
+% Energy of noise from start of pulse to next start of pulse: 1800*0.001*25/37.5e3 + 2200*0.001*25/37.5e3 = 0.0012 + 0.00146     = 0.00266 J (the same for second configuration)
 
 disp(' === Testing data ===')
 disp(['Current Ia: ' num2str(Ia_lvl) ' A, Ib: ' num2str(Ib_lvl) ' A.'])

@@ -1,4 +1,11 @@
-%% === Calculate energy of a braking sequence ====================
+%% === Calculate energy of a braking group ====================
+% A rise and fall of pulses of first current waveform are found. Offset of few samples before and
+% after is added and at these points the current waveforms are split. The energy is calculated as
+% integral in a whole part between these two split points for pulses. The energy where pulse is not
+% present is accounted as energy of "noise".
+% The two voltages are switched for each pulse for two currents. For the first pulse the first
+% voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
+% applied to first current -> configuration 2. 
 function [E EN] = energy2(groupindex, fs, triglvl, dirpath, plots);
 
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
@@ -8,13 +15,6 @@ for j = 1:length(varnms)
         load(fng{j});
 end
 
-% %%%%%%XXX
-% % remove offset - just test XXX
-% current_offset_a = mean(Ia(1:1000))
-% current_offset_b = mean(Ib(1:1000))
-% Ia = Ia - current_offset_a;
-% Ib = Ib - current_offset_b;
-% 
 %% --- Other required quantities -------------------- %<<<1
 % time axis:
 t = [1:length(Ia)]./fs - 1/fs;

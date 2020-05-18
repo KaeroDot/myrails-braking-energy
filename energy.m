@@ -1,4 +1,10 @@
-%% === Calculate energy of a braking sequence ====================
+%% === Calculate energy of a braking group ====================
+% A middle between pulses of first current waveform is found. At these points the current waveforms
+% are split. The energy is calculated as integral in a whole part between these two split points.
+% The two voltages are switched at each split for two currents. For the first pulse the first
+% voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
+% applied to first current -> configuration 2. 
+
 function [E] = energy(groupindex, fs, triglvl, dirpath, plots);
 
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
