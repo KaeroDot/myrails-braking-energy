@@ -159,7 +159,7 @@ EN = zeros(2, size(groups_start_id));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
         % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
-        [E(:,i) EN(:,i)] = energy2(i, fs, triglvl, dirpath, plots);
+        [E(:,i) EN(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
 end
 
 %% --- Calculate total energy -------------------- %<<<1
