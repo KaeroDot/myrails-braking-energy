@@ -72,12 +72,12 @@ ide = find(negslopes);
 % check the same number of rise ups and rise downs:
 if length(ids) ~= length(ide)
         error('The number of pulse starts is different to number of pulse ends. The splitting into groups was not done correctly.')
-endif
+end
 pulses = 0;
 if ~isempty(ids)
         % boolean if pulses are present
         pulses = 1;
-endif
+end
 
 % get lengths between all slopes (in samples): 
 lengths = diff(idslopes);
@@ -215,7 +215,7 @@ if pulses
                 pulses_for_unc = 2 + fix(rand(1, noofpulses_for_unc).*(length(ids)-1 - 2));
         else
                 pulses_for_unc = fix(linspace(2, length(ids)-1, noofpulses_for_unc));
-        endif
+        end
 end
 % prepare variable to speed up for loop:
 E1 = NaN.*zeros(1, size(ids,2));
@@ -270,7 +270,7 @@ if pulses
                 if any(i == pulses_for_unc)
                         [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i)] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
-        endfor
+        end
         % remove start of fictive pulse that was added before the for loop
         idsS(end) = [];
 end % if pulses
@@ -362,7 +362,7 @@ if plots
                 title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A\nred: pulse, green: shifted pulse, black +o: noise for pulse', groupindex, mean(Ia), std(Ia)))
         else
                 title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A', groupindex, mean(Ia), std(Ia)))
-        endif
+        end
         plot(t, Ia, '-b')
         hold off
         xlabel('time (s)')
