@@ -22,7 +22,7 @@ function pr = permrep(E);
                 % for 20 it takes ~23 seconds on iCore 7
                 % for 21 it takes ~49 seconds on iCore 7
                 disp('this will take a long time...')
-        endif
+        end
         P = R^C;
         ids = dec2base(0:P-1, R) - '0' + 1;
         pr = zeros(P, size(E, 2));
