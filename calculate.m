@@ -154,10 +154,10 @@ for j = 1:length(varnms)
 end
 
 %% --- Calculate energy for individual groups -------------------- %<<<1
-E = zeros(2, size(groups_start_id));
-EN = zeros(2, size(groups_start_id));
-uE = zeros(2, size(groups_start_id));
-urE = zeros(2, size(groups_start_id));
+E = zeros(2, size(groups_start_id, 2));
+EN = zeros(2, size(groups_start_id, 2));
+uE = zeros(2, size(groups_start_id, 2));
+urE = zeros(2, size(groups_start_id, 2));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
         % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
