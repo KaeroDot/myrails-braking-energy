@@ -8,16 +8,23 @@
 % The two voltages are switched for each pulse for two currents. For the first pulse the first
 % voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
 % applied to first current -> configuration 2. 
-function [E EN] = energy3(groupindex, fs, triglvl, dirpath, plots);
+function [E EN urE] = energy3(groupindex, fs, triglvl, dirpath, plots);
 
-%% --- Constants -------------------- %<<<1
+%% --- Constants and settings -------------------- %<<<1
 % Time shift by which will be shifted back in time the point of split for start of pulse and shifted forward the
 % point of split of end of pulse. Pulse is found by middle of peak - but in real it starts few
 % samples back.
-tshift_pulse = 3; % (samples) XXX arbitrary number!
+tshift_pulse = 20; % (samples) 
+tshift_pulse_unc = 5; % (samples) 
 % Maximum time shift that will be used to find noise level around the peak. If distance between
 % peaks is too small, the time shift will be set to smaller number.
-tshift_PN = 20; % (samples) XXX arbitrary number!
+tshift_PN = 50; % (samples) 
+tshift_PN_unc = 5; % (samples) 
+% how many pulses will be evaluated for uncertainty (and plotted if plots=1):
+noofpulses_for_unc = 100;
+% randomize which pulses will be evaluated for uncertainty (and plotted if plots=1)?:
+% (set 0 for debugging)
+randomize_pulses_for_unc = 1;
 
 %% --- Load data -------------------- %<<<1
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
@@ -203,17 +210,22 @@ end
 
 % preparation for plotting, for selected pulses fit data will be saved:
 if pulses
-        if plots
-                noofpulses_to_plot = ceil(length(ids)./100);
-                pulses_to_plot = fix(linspace(1, length(ids)-1, noofpulses_to_plot));
-                fitlines = cell(size(ids));
-        end
+        if randomize_pulses_for_unc
+                % randomly generate which pulses will be selected for 
+                pulses_for_unc = 2 + fix(rand(1, noofpulses_for_unc).*(length(ids)-1 - 2));
+        else
+                pulses_for_unc = fix(linspace(2, length(ids)-1, noofpulses_for_unc));
+        endif
 end
 % prepare variable to speed up for loop:
 E1 = NaN.*zeros(1, size(ids,2));
+uncrE1 = E1;
 E2 = E1;
+uncrE2 = E1;
 EN1 = E1;
 EN2 = E1;
+uncrEPN1 = E1;
+uncrEPN2 = E1;
 % noise of the first section:
 if idsS(1) > 1
         % there is some noise before first pulse:
@@ -251,12 +263,12 @@ if pulses
                 % add energy of noise during pulse into energy of noise after pulse:
                 EN1(i+1) = EN1(i+1) + tmpE1;
                 EN2(i+1) = EN2(i+1) + tmpE2;
-                % save data for plotting
-                if plots
-                        if any(i == pulses_to_plot)
-                                fitlines{i,1} = pa;
-                                fitlines{i,2} = pb;
-                        end
+                % uncertainty of estimation
+                % uncertainty of estimation does the plotting of individual pulses
+                idx1 = idsPN(i) - 2*tshift_PN_unc;
+                idx2 = idePN(i) + 2*tshift_PN_unc;
+                if any(i == pulses_for_unc)
+                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i)] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
         endfor
         % remove start of fictive pulse that was added before the for loop
@@ -288,13 +300,32 @@ sw1N = (sw1N - floor(sw1N)>=0.5);
 EN(1,1) = sum(     sw1N .*EN1  + not(sw1N).*EN2 );
 EN(2,1) = sum( not(sw1N).*EN1 +      sw1N .*EN2 );
 
+% get uncertainties max and min, calculated as maximum relative uncertainty found:
+% because isnan is not in basic matlab:
+if pulses
+        tmp = uncrE1;
+        tmp(isnan(tmp)) = [];
+        urEmin(1) = min(tmp);
+        urE(1) = max(tmp);
+        tmp = uncrE2;
+        tmp(isnan(tmp)) = [];
+        urEmin(2) = min(tmp);
+        urE(2) = max(tmp);
+else
+        urE = [0; 0];
+end
+
 %% --- Display info about energies -------------------- %<<<1
 disp(['Energy of noise configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
 disp(['Error between two energies of noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
 disp(['Error between two energies of noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
-if ~isempty(periods)
+if pulses
+        % ratio to pulses noise:
         disp(['Noise 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total energy 1.']);
         disp(['Noise 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total energy 2.']);
+        % display info about uncertainty:
+        disp(['Relative uncertainty of single pulses energy E1 is from: ' num2str(urEmin(1).*100) ' to ' num2str(urE(1).*100) ' %']);
+        disp(['Relative uncertainty of single pulses energy E2 is from: ' num2str(urEmin(2).*100) ' to ' num2str(urE(2).*100) ' %']);
 end
 
 %% --- 2DO -------------------- XXX %<<<1
@@ -302,24 +333,31 @@ end
 
 %% --- Plotting -------------------- %<<<1
 if plots
-        % plot current with lines showing splitting - this figure is challenging the hardware, use only if
-        % needed!
+        % plot current with lines showing splitting  %<<<2
+        % this figure is challenging the hardware, use only if needed!
         figure
         hold on
         if pulses
                 yl = [min(Ia) max(Ia)];
+                yl(1) = 1;
+                disp('this will be slow...')
                 y = repmat(yl', 1, length(t(ids)));
                 x = repmat(t(ids), 2, 1);
                 plot(x,y,'-r');
                 x = repmat(t(ide), 2, 1);
+                disp('still working...')
                 plot(x,y,'-r');
                 x = repmat(t(idsS), 2, 1);
+                disp('still working....')
                 plot(x,y,'-g');
                 x = repmat(t(ideS), 2, 1);
+                disp('still working.....')
                 plot(x,y,'-g');
                 x = repmat(t(idsPN), 2, 1);
+                disp('still working......')
                 plot(x,y,'+k');
                 x = repmat(t(idePN), 2, 1);
+                disp('still working.......')
                 plot(x,y,'ok');
                 title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A\nred: pulse, green: shifted pulse, black +o: noise for pulse', groupindex, mean(Ia), std(Ia)))
         else
@@ -333,28 +371,7 @@ if plots
         close
 
         if pulses
-                % plot selected current pulses, so user can visually check if splitting occured correctly:
-                for i = pulses_to_plot
-                        figure
-                        hold on
-                        plot(Ia(idsPN(i):idePN(i)), '-b')
-                        plot([1 idePN(i) - idsPN(i)], polyval(fitlines{i,1}, [idsPN(i) idePN(i)]), '-b')
-                        plot(Ib(idsPN(i):idePN(i)), '-r')
-                        plot([1 idePN(i) - idsPN(i)], polyval(fitlines{i,2}, [idsPN(i) idePN(i)]), '-r')
-                        yl = ylim;
-                        plot([idsS(i) idsS(i)]-idsPN(i), yl', '--k')
-                        plot([ideS(i) ideS(i)]-idsPN(i), yl', '--k')
-                        set(gca, 'yscale', 'log')
-                        hold off
-                        title(sprintf('Gr. %d - Selected current pulse no %d', groupindex, i))
-                        xlabel('time (samples), zero is set to pulse start')
-                        ylabel('current (A)')
-                        legend('Ia', 'offset fit for Ia', 'Ib', 'offset fit Ib', 'time shifted pulse start', 'time shifted pulse end')
-                        saveplot(sprintf('%05d-selected_current_pulse_%04d', groupindex, i), dirpath)
-                        close
-                end
-
-                % errors of pulse starts from ideal line
+                % errors of pulse starts from ideal line %<<<2
                 % reveals gaps between pulses
                 figure
                 hold on
@@ -386,7 +403,7 @@ if plots
                 % saveplot(sprintf('%05d-energy_a_config_1', groupindex), dirpath)
                 % close
 
-                % energy comparison for both configurations
+                % energy comparison for both configurations %<<<2
                 figure
                 x = t_pulsestart;
                 y = E1.*sw1 + E2.*not(sw1);

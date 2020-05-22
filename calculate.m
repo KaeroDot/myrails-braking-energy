@@ -156,10 +156,13 @@ end
 %% --- Calculate energy for individual groups -------------------- %<<<1
 E = zeros(2, size(groups_start_id));
 EN = zeros(2, size(groups_start_id));
+uE = zeros(2, size(groups_start_id));
+urE = zeros(2, size(groups_start_id));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
         % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
-        [E(:,i) EN(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
+        [E(:,i) EN(:,i) urE(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
+        uE = urE.*E;
 end
 
 %% --- Calculate total energy -------------------- %<<<1
@@ -170,8 +173,12 @@ disp([' === estimates for total data  ===']);
 % correct one, so lets calculate mean and std)
 % permutations with repetitions:
 E = sum(permrep(E), 2);
-disp(['Braking energy: (' num2str(mean(E)) ' +- ' num2str(std(E)) ') J (' num2str(std(E)./mean(E).*100) ' %).']);
+disp(['Braking energy                                     : ' num2str(mean(E)) ' J.']);
+% uncertainty components:
+uE = sqrt(sum(permrep(uE).^2, 2));
+disp(['Uncertainty caused by pulse noise fitting          : ' num2str(max(uE)) ' J (' num2str(max(uE)./mean(E).*100) ' %).']);
+disp(['Uncertainty caused by unknown correct configuration: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).']);
 % do the same for energy of noise:
 EN = sum(permrep(EN), 2);
-disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
-disp(['Noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);
+disp(['Noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
+disp(['Ratio of noise energy and braking energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' %.']);
