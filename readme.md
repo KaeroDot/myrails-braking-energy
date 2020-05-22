@@ -25,6 +25,24 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
   run it. However every file IrogA.mat etc. have to be loaded at least once into memory and this
   action can easily eat 4 - 8 GB of RAM depending on the system.
 - Internally script use variable names as in the paper, so renaming of variables happens.
+- Three methods for calculation: ```energy.m```, ```energy2.m```, ```energy3.m```
+
+## energy.m
+- First tested method.
+- Just calculates energy of all.
+
+## energy2.m
+- Second tested method.
+- Differentiate braking pulses and noise between pulses.
+- Noise in between pulses is takes about 30 % of all energy in the signal.
+
+## energy3.m
+- Third tested method.
+- Braking pulse energy is calculated by fitting surrounding noise and subtracting fitted noise from
+  pulse.
+- Variation of boundaries to obtain uncertainties:
+
+  ![](pulse_fitting_explanation.png)
 
 ## Issues
 - Identification of pulses is based on finding proper trigger level. This can fail at some time.
