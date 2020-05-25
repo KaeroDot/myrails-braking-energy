@@ -18,14 +18,17 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 - Chopping frequency nor sampling frequency do not have to be exact nor precise. Braking pulses in current waveform are identified by finding starts and ends of pulses.
 - Pulses are identified by setting trigger level voltage, this voltage is found heuristically.
 - Waveforms are splitted into braking groups, New braking group is found if no braking happens for at least 1 second.
-- The energy is calculated in two ways: ```Vhf*Ia + (Vdsf-Vhf)*Ib```, and ```Vhf*Ib + (Vdsf-Vhf)*Ia```,
+- The energy is calculated in two ways (configurations): ```Vhf*Ia + (Vdsf-Vhf)*Ib```, and ```Vhf*Ib + (Vdsf-Vhf)*Ia```,
   alternately for every pulse.
-- Script ```calculate.m``` reports both energies.
+- For every group both configurations are calculated.
+- Final value is estimated from all possibilities from 2 configurations for every group - if too
+  many groups, Monte Carlo Method is used.
+- Three methods for calculation: ```energy.m```, ```energy2.m```, ```energy3.m```
+- Scripts ```calculate(2,3).m``` reports both energies.
 - Script is optimised to use more harddrive than memory so even desktop computers should be able to
   run it. However every file IrogA.mat etc. have to be loaded at least once into memory and this
-  action can easily eat 4 - 8 GB of RAM depending on the system.
+  action can easily eat 4 - 8 GB of RAM depending on the system, and calculation is slow.
 - Internally script use variable names as in the paper, so renaming of variables happens.
-- Three methods for calculation: ```energy.m```, ```energy2.m```, ```energy3.m```
 
 ## energy.m
 - First tested method.
@@ -40,6 +43,8 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 - Third tested method.
 - Braking pulse energy is calculated by fitting surrounding noise and subtracting fitted noise from
   pulse.
+- The number of samples between pulse start/end and shifted pulse start/end and noise start/end has
+  to be set at the beginning of the script.
 - Variation of boundaries to obtain uncertainties:
 
   ![](pulse_fitting_explanation.png)
