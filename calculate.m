@@ -161,7 +161,7 @@ urE = zeros(2, size(groups_start_id, 2));
 for i = 1:length(groups_start_id)
         disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
         % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
-        [E(:,i) EN(:,i) urE(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
+        [E(:,i) EPN(:,i) EN(:,i) urE(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
         uE = urE.*E;
 end
 
@@ -179,6 +179,9 @@ uE = sqrt(sum(permrep(uE).^2, 2));
 disp(['Uncertainty caused by pulse noise fitting          : ' num2str(max(uE)) ' J (' num2str(max(uE)./mean(E).*100) ' %).']);
 disp(['Uncertainty caused by unknown correct configuration: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).']);
 % do the same for energy of noise:
+EPN = sum(permrep(EPN), 2);
 EN = sum(permrep(EN), 2);
-disp(['Noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
-disp(['Ratio of noise energy and braking energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' %.']);
+disp(['Noise during pulse energy: (' num2str(mean(EPN)) ' +- ' num2str(std(EPN)) ') J (' num2str(std(EPN)./mean(EPN).*100) ' %).']);
+disp(['Ratio of noise during pulse energy and braking energy is ' num2str(mean(EPN)./mean(E).*100) ' %.']);
+disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
+disp(['Total noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);

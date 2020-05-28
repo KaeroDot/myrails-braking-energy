@@ -8,23 +8,24 @@
 % The two voltages are switched for each pulse for two currents. For the first pulse the first
 % voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
 % applied to first current -> configuration 2. 
-function [E EN urE] = energy3(groupindex, fs, triglvl, dirpath, plots);
+function [E EPN EN urE] = energy3(groupindex, fs, triglvl, dirpath, plots);
 
-%% --- Constants and settings -------------------- %<<<1
+%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1
 % Time shift by which will be shifted back in time the point of split for start of pulse and shifted forward the
 % point of split of end of pulse. Pulse is found by middle of peak - but in real it starts few
 % samples back.
-tshift_pulse = 20; % (samples) 
-tshift_pulse_unc = 5; % (samples) 
+tshift_pulse = 2; % (samples) 
+tshift_pulse_unc = 1; % (samples) 
 % Maximum time shift that will be used to find noise level around the peak. If distance between
 % peaks is too small, the time shift will be set to smaller number.
-tshift_PN = 50; % (samples) 
-tshift_PN_unc = 5; % (samples) 
+tshift_PN = 2; % (samples) 
+tshift_PN_unc = 1; % (samples) 
 % how many pulses will be evaluated for uncertainty (and plotted if plots=1):
 noofpulses_for_unc = 100;
 % randomize which pulses will be evaluated for uncertainty (and plotted if plots=1)?:
 % (set 0 for debugging)
 randomize_pulses_for_unc = 1;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% --- Load data -------------------- %<<<1
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
@@ -252,17 +253,17 @@ if pulses
                 E1(i) = trapz(Vhf   (idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
                 E2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vhf   (idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
                 % energy of noise part during pulse:
-                tmpE1 = trapz(Vhf   (idsS(i):ideS(i)).*IaN)./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*IbN)./fs;
-                tmpE2 = trapz(Vdsfhf(idsS(i):ideS(i)).*IaN)./fs + trapz(Vhf   (idsS(i):ideS(i)).*IbN)./fs;
+                EPN1(i) = trapz(Vhf   (idsS(i):ideS(i)).*IaN)./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*IbN)./fs;
+                EPN2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*IaN)./fs + trapz(Vhf   (idsS(i):ideS(i)).*IbN)./fs;
                 % subtract energy of noise from energy of pulse:
-                E1(i) = E1(i) - tmpE1;
-                E2(i) = E2(i) - tmpE2;
+                E1(i) = E1(i) - EPN1(i);
+                E2(i) = E2(i) - EPN2(i);
                 % energy of noise after pulse:
                 EN1(i+1) = trapz(Vhf   (ideS(i):idsS(i+1)).*Ia(ideS(i):idsS(i+1)))./fs + trapz(Vdsfhf(ideS(i):idsS(i+1)).*Ib(ideS(i):idsS(i+1)))./fs;
                 EN2(i+1) = trapz(Vdsfhf(ideS(i):idsS(i+1)).*Ia(ideS(i):idsS(i+1)))./fs + trapz(Vhf   (ideS(i):idsS(i+1)).*Ib(ideS(i):idsS(i+1)))./fs;
                 % add energy of noise during pulse into energy of noise after pulse:
-                EN1(i+1) = EN1(i+1) + tmpE1;
-                EN2(i+1) = EN2(i+1) + tmpE2;
+                EN1(i+1) = EN1(i+1) + EPN1(i);
+                EN2(i+1) = EN2(i+1) + EPN2(i);
                 % uncertainty of estimation
                 % uncertainty of estimation does the plotting of individual pulses
                 idx1 = idsPN(i) - 2*tshift_PN_unc;
@@ -285,12 +286,19 @@ if pulses
         sw1 = (sw1 - floor(sw1)>=0.5);
         E(1,1) = sum(     sw1 .*E1  + not(sw1).*E2 );
         E(2,1) = sum( not(sw1).*E1 +      sw1 .*E2 );
+        EPN(1,1) = sum(     sw1 .*EPN1  + not(sw1).*EPN2 );
+        EPN(2,1) = sum( not(sw1).*EPN1 +      sw1 .*EPN2 );
         disp(['Energy configuration 1: ' num2str(E(1)) ' J, configuration 2: ' num2str(E(2)) ' J.']);
+        disp(['Energy of noise during pulse conf. 1: ' num2str(EPN(1)) ' J, conf. 2: ' num2str(EPN(2)) ' J.']);
         disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
         disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
+        disp(['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.']);
+        disp(['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.']);
 else
         E(1,1) = 0;
         E(2,1) = 0;
+        EPN(1,1) = 0;
+        EPN(2,1) = 0;
 end
 % prepare indexing vectors for two powers 
 % i.e. make series 1,0,1,0,... (based on square.m from statistics package):
@@ -316,13 +324,13 @@ else
 end
 
 %% --- Display info about energies -------------------- %<<<1
-disp(['Energy of noise configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
-disp(['Error between two energies of noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
-disp(['Error between two energies of noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
+disp(['Energy of total noise configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
+disp(['Error between two energies of total noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
+disp(['Error between two energies of total noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
 if pulses
         % ratio to pulses noise:
-        disp(['Noise 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total energy 1.']);
-        disp(['Noise 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total energy 2.']);
+        disp(['Total noise 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total energy 1.']);
+        disp(['Total noise 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total energy 2.']);
         % display info about uncertainty:
         disp(['Relative uncertainty of single pulses energy E1 is from: ' num2str(urEmin(1).*100) ' to ' num2str(urE(1).*100) ' %']);
         disp(['Relative uncertainty of single pulses energy E2 is from: ' num2str(urEmin(2).*100) ' to ' num2str(urE(2).*100) ' %']);
