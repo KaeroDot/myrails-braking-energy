@@ -183,5 +183,5 @@ EPN = sum(permrep(EPN), 2);
 EN = sum(permrep(EN), 2);
 disp(['Noise during pulse energy: (' num2str(mean(EPN)) ' +- ' num2str(std(EPN)) ') J (' num2str(std(EPN)./mean(EPN).*100) ' %).']);
 disp(['Ratio of noise during pulse energy and braking energy is ' num2str(mean(EPN)./mean(E).*100) ' %.']);
-disp(['Total noise energy: (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
+disp(['Total noise energy (overestimated): (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
 disp(['Total noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);

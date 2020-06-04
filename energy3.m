@@ -14,12 +14,12 @@ function [E EPN EN urE] = energy3(groupindex, fs, triglvl, dirpath, plots);
 % Time shift by which will be shifted back in time the point of split for start of pulse and shifted forward the
 % point of split of end of pulse. Pulse is found by middle of peak - but in real it starts few
 % samples back.
-tshift_pulse = 2; % (samples) 
-tshift_pulse_unc = 1; % (samples) 
+tshift_pulse = 20; % (samples) 
+tshift_pulse_unc = 5; % (samples) 
 % Maximum time shift that will be used to find noise level around the peak. If distance between
 % peaks is too small, the time shift will be set to smaller number.
-tshift_PN = 2; % (samples) 
-tshift_PN_unc = 1; % (samples) 
+tshift_PN = 50; % (samples) 
+tshift_PN_unc = 5; % (samples) 
 % how many pulses will be evaluated for uncertainty (and plotted if plots=1):
 noofpulses_for_unc = 100;
 % randomize which pulses will be evaluated for uncertainty (and plotted if plots=1)?:
@@ -249,6 +249,13 @@ if pulses
                 pb = polyfit(x, [Ib(idsPN(i):idsS(i)) Ib(ideS(i):idePN(i))], 1);
                 % tmpIb = Ib(idsS(i):ideS(i)) - polyval(pb, [idsS(i):ideS(i)]);
                 IbN = polyval(pb, [idsS(i):ideS(i)]);
+                % resistance of shunts during pulse:
+                id = find(max(Ia(idsS(i):ideS(i))) == Ia(idsS(i):ideS(i)));
+                id = id(1) + idsS(i) - 1;
+                Ra1(i) = Vhf   (id)./Ia(id);
+                Ra2(i) = Vdsfhf(id)./Ia(id);
+                Rb1(i) = Vhf   (id)./Ib(id);
+                Rb2(i) = Vdsfhf(id)./Ib(id);
                 % energy of pulse:
                 E1(i) = trapz(Vhf   (idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
                 E2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vhf   (idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
@@ -294,6 +301,11 @@ if pulses
         disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
         disp(['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.']);
         disp(['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.']);
+        % resistors:
+        Ra(1,:) =     sw1 .*Ra1  + not(sw1).*Ra2;
+        Ra(2,:) = not(sw1).*Ra1  +     sw1 .*Ra2;
+        Rb(1,:) =     sw1 .*Rb1  + not(sw1).*Rb2;
+        Rb(2,:) = not(sw1).*Rb1  +     sw1 .*Rb2;
 else
         E(1,1) = 0;
         E(2,1) = 0;
@@ -324,7 +336,7 @@ else
 end
 
 %% --- Display info about energies -------------------- %<<<1
-disp(['Energy of total noise configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
+disp(['Energy of total noise (overestimated) configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
 disp(['Error between two energies of total noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
 disp(['Error between two energies of total noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
 if pulses
@@ -422,6 +434,21 @@ if plots
                 xlabel('time of pulse start (s)')
                 ylabel('Energy (J)')
                 saveplot(sprintf('%05d-energy_config_1_2', groupindex), dirpath)
+                close
+
+                % resistance %<<<2
+                figure
+                hold on
+                plot(t_pulsestart, Ra(1,:), '-y', t_pulsestart, sgolayfilt(Ra(1,:), 2, 21), '-y', 'linewidth',2)
+                plot(t_pulsestart, Ra(2,:), '-r', t_pulsestart, sgolayfilt(Ra(2,:), 2, 21), '-r', 'linewidth',2)
+                plot(t_pulsestart, Rb(1,:), '-g', t_pulsestart, sgolayfilt(Rb(1,:), 2, 21), '-g', 'linewidth',2)
+                plot(t_pulsestart, Rb(2,:), '-b', t_pulsestart, sgolayfilt(Rb(2,:), 2, 21), '-b', 'linewidth',2)
+                hold off
+                legend( 'Ra1', 'filt(Ra1)', 'Ra2', 'filt(Ra2)', 'Rb1', 'filt(Rb1)', 'Rb2', 'filt(Rb2)')
+                title([num2str(groupindex) ' - Resistance of braking rheostats'])
+                xlabel('time of pulse start (s)')
+                ylabel('R (Ohm)')
+                saveplot(sprintf('%05d-rheostats_1_2', groupindex), dirpath)
                 close
 
         end

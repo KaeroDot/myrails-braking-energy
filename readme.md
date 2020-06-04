@@ -38,6 +38,7 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 - Second tested method.
 - Differentiate braking pulses and noise between pulses.
 - Noise in between pulses is takes about 30 % of all energy in the signal.
+- Noise in between pulses is overestimated because the voltage drop across the rheostat is some (unknown) zero: Vdwnf falls across the GTO.
 
 ## energy3.m
 - Third tested method.
@@ -45,6 +46,8 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
   pulse.
 - The number of samples between pulse start/end and shifted pulse start/end and noise start/end has
   to be set at the beginning of the script.
+- Noise in between pulses is overestimated because the voltage drop across the rheostat is some (unknown) zero: Vdwnf falls across the GTO.
+- Resistance of braking rheostat is estimated based on peak value of current pulse.
 - Variation of boundaries to obtain uncertainties:
 
   ![](pulse_fitting_explanation.png)
