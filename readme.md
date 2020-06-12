@@ -52,6 +52,15 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 
   ![](pulse_fitting_explanation.png)
 
+- How uncertainty is calculated:
+        1. Pulse uncertainty is based on variating of:
+                - current offset and gain
+                - voltage offset and gain
+                - pulse start and end
+                - fitting noise start and end
+        2. Uncertainty of all pulses in a group is calculated as linear sum of pulse uncertainties, and this is done for both configurations. The reason is the correlation is assumpted as 1. See GUM uncertainty framework, page 21, equation top right.
+        2. Total uncertainty of all pulses in all groups is calculated as maximum of all possible permutations of linear sum of group uncertainties.
+
 ## Issues
 - Identification of pulses is based on finding proper trigger level. This can fail at some time.
 - Braking groups shows out a consecutive series of pulses. So for every next pulse chopping

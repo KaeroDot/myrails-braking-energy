@@ -44,8 +44,8 @@ Vdsfhf = Vdsf - Vhf;
 
 %% --- Display basic informations about signal -------------------- %<<<1
 disp(['Length of signal: ' num2str(length(Ia)) ' samples, duration: ' num2str(length(Ia)./fs) ' s.'])
-disp(sprintf('Ia: mean: %g A, std: %g A.', mean(Ia), std(Ia)))
-disp(sprintf('Ib: mean: %g A, std: %g A.', mean(Ib), std(Ib)))
+disp(sprintf('Ia: max: %g A, std: %g A.', max(Ia), std(Ia)))
+disp(sprintf('Ib: max: %g A, std: %g A.', max(Ib), std(Ib)))
 disp(sprintf('Vhf: mean: %g V, std: %g V.', mean(Vhf), std(Vhf)))
 disp(sprintf('Vdsf: mean: %g V, std: %g V.', mean(Vdsf), std(Vdsf)))
 
@@ -162,10 +162,13 @@ end
 %                idsPN - start of section for noise level estimation
 
 if pulses
-        % pulse shift indexes %<<<2
-        % get smaller of required time shift and off length:
-        tshift_pulse = min([tshift_pulse lengthsoff]);
+        % pulse/PN shift indexes %<<<2
+        tshift_pulse = min([tshift_pulse fix((lengthsoff - 1)./2)]);
+        tshift_PN = min([tshift_PN fix((lengthsoff - 1)./2)]);
         disp(['Minimal off length is ' num2str(min(lengthsoff)) ' samples. All pulse starts will be shifted back by ' num2str(tshift_pulse) ' samples. All pulse ends will be shifted forward by ' num2str(tshift_pulse) ' samples.'])
+        disp(['The noise around pulse will be estimated from ' num2str(tshift_PN) ' samples before and after pulse start.'])
+
+        % pulse start indexes %<<<2
         idsS = ids - tshift_pulse;
         % fix first negative index:
         if idsS(1) < 1
@@ -178,8 +181,6 @@ if pulses
         end
 
         % pulse noise indexes %<<<2
-        tshift_PN = min([tshift_PN (lengthsoff - 2*tshift_pulse)]);
-        disp(['The noise around pulse will be estimated from ' num2str(tshift_PN) ' samples before and after pulse.'])
         idsPN = idsS - tshift_PN;
         % fix first negative index:
         if idsPN(1) < 1
@@ -212,8 +213,8 @@ end
 % preparation for plotting, for selected pulses fit data will be saved:
 if pulses
         if randomize_pulses_for_unc
-                % randomly generate which pulses will be selected for 
-                pulses_for_unc = 2 + fix(rand(1, noofpulses_for_unc).*(length(ids)-1 - 2));
+                % randomly generate which pulses will be selected for, non repeating indexes:
+                pulses_for_unc = ids(randperm(length(ids)))(1:noofpulses_for_unc);
         else
                 pulses_for_unc = fix(linspace(2, length(ids)-1, noofpulses_for_unc));
         end
@@ -273,9 +274,10 @@ if pulses
                 EN2(i+1) = EN2(i+1) + EPN2(i);
                 % uncertainty of estimation
                 % uncertainty of estimation does the plotting of individual pulses
+                % cut part of currents/voltages so small data are transfered into pulse_uncertainty function:
                 idx1 = idsPN(i) - 2*tshift_PN_unc;
                 idx2 = idePN(i) + 2*tshift_PN_unc;
-                if any(i == pulses_for_unc)
+                if any(ids(i) == pulses_for_unc)
                         [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i)] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
         end
@@ -295,12 +297,6 @@ if pulses
         E(2,1) = sum( not(sw1).*E1 +      sw1 .*E2 );
         EPN(1,1) = sum(     sw1 .*EPN1  + not(sw1).*EPN2 );
         EPN(2,1) = sum( not(sw1).*EPN1 +      sw1 .*EPN2 );
-        disp(['Energy configuration 1: ' num2str(E(1)) ' J, configuration 2: ' num2str(E(2)) ' J.']);
-        disp(['Energy of noise during pulse conf. 1: ' num2str(EPN(1)) ' J, conf. 2: ' num2str(EPN(2)) ' J.']);
-        disp(['Error between two energies (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
-        disp(['Error between two energies (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
-        disp(['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.']);
-        disp(['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.']);
         % resistors:
         Ra(1,:) =     sw1 .*Ra1  + not(sw1).*Ra2;
         Ra(2,:) = not(sw1).*Ra1  +     sw1 .*Ra2;
@@ -320,32 +316,51 @@ sw1N = (sw1N - floor(sw1N)>=0.5);
 EN(1,1) = sum(     sw1N .*EN1  + not(sw1N).*EN2 );
 EN(2,1) = sum( not(sw1N).*EN1 +      sw1N .*EN2 );
 
-% get uncertainties max and min, calculated as maximum relative uncertainty found:
-% because isnan is not in basic matlab:
+% total uncertainties: %<<<1
+% (lengthy code because isnan is not in basic matlab)
 if pulses
-        tmp = uncrE1;
-        tmp(isnan(tmp)) = [];
-        urEmin(1) = min(tmp);
-        urE(1) = max(tmp);
-        tmp = uncrE2;
-        tmp(isnan(tmp)) = [];
-        urEmin(2) = min(tmp);
-        urE(2) = max(tmp);
+        % absolute uncertainties of pulses:
+        % simple sum (not sqrt of sum of squares) because correlation is considered
+        % as 1, therefore sum of input quantities propagates into simple sum of uncertainties
+        % (see GUM Guide 1, page 21 top)
+        uE(1,1) = nansum(     sw1 .*uncrE1.*E1 + not(sw1).*uncrE2.*E2);
+        uE(2,1) = nansum( not(sw1).*uncrE1.*E1 +     sw1 .*uncrE2.*E2);
+        % multiply by ratio of lengths to get approximate uncertainty for all
+        % pulses (whole energy), not only the ones randomly selected for uncertainty
+        % calculation
+        uE(1,1) = uE(1).*length(ids)./length(pulses_for_unc);
+        uE(2,1) = uE(2).*length(ids)./length(pulses_for_unc);
+        urE = uE./E;
 else
         urE = [0; 0];
 end
 
 %% --- Display info about energies -------------------- %<<<1
-disp(['Energy of total noise (overestimated) configuration 1: ' num2str(EN(1)) ' J, configuration 2: ' num2str(EN(2)) ' J.']);
-disp(['Error between two energies of total noise (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
-disp(['Error between two energies of total noise (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
+
+disp(['Energy of total noise (overestimated) conf. 1: ' num2str(EN(1)) ' J, conf. 2: ' num2str(EN(2)) ' J.']);
+disp(['Error between total noise energies of two configurations (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
+disp(['Error between total noise energies of two configurations (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
 if pulses
-        % ratio to pulses noise:
-        disp(['Total noise 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total energy 1.']);
-        disp(['Total noise 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total energy 2.']);
-        % display info about uncertainty:
-        disp(['Relative uncertainty of single pulses energy E1 is from: ' num2str(urEmin(1).*100) ' to ' num2str(urE(1).*100) ' %']);
-        disp(['Relative uncertainty of single pulses energy E2 is from: ' num2str(urEmin(2).*100) ' to ' num2str(urE(2).*100) ' %']);
+        disp(['Energy of noise during pulse conf. 1: ' num2str(EPN(1)) ' J, conf. 2: ' num2str(EPN(2)) ' J.']);
+        disp(['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.']);
+        disp(['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.']);
+
+        disp(['Total noise conf. 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total pulse energy conf. 1.']);
+        disp(['Total noise conf. 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total pulse energy conf. 2.']);
+
+        disp(['Error between total pulse energies of two configurations (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
+        disp(['Error between total pulse energies of two configurations (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
+
+        disp(['Relative uncertainty of single pulse energy E1: mean: ' num2str(nanmean(uncrE1).*100) ', min: ' num2str(min(uncrE1).*100) ', max: ' num2str(max(uncrE1).*100) ' %']);
+        disp(['Relative uncertainty of single pulse energy E2  mean: ' num2str(nanmean(uncrE2).*100) ', min: ' num2str(min(uncrE2).*100) ', max: ' num2str(max(uncrE2).*100) ' %']);
+
+        disp(['>> Total pulse energy conf. 1: ' num2str(E(1)) ' J, conf. 2: ' num2str(E(2)) ' J.']);
+        disp(['>> Uncertainty of total pulse energy: conf. 1: ' num2str(uE(1)) ' J, conf. 2: ' num2str(min(uE(2))) 'J, (' num2str(uE(1)./E(1).*100) ' %, ' num2str(uE(2)./E(2).*100) ' %).']);
+
+        Esim(1,1) = sum(lengthson)./fs.*max(Ia).*mean(Vhf) + sum(lengthson)./fs.*max(Ib).*mean(Vdsfhf);
+        Esim(2,1) = sum(lengthson)./fs.*max(Ia).*mean(Vdsfhf) + sum(lengthson)./fs.*max(Ib).*mean(Vhf);
+        disp(['Total pulse energy based on pulse length and average I,V, for Ia, Vhf: ' num2str(Esim(1)) ' J, for Ib, Vdsfhf: ' num2str(Esim(2)) ' J,'])
+        disp(['first value is ' num2str(Esim(1)./E(1).*100) ' % of total pulse energy conf. 1.'])
 end
 
 %% --- 2DO -------------------- XXX %<<<1

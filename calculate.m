@@ -14,7 +14,7 @@ fs = 37.5e3;
 dirpath = 'exampledata';
 % dirpath = 'testdata';
 % make plots? (0/1):
-plots = 1;
+plots = 0;
 % rewrite splitted data? (can take long time, has no sense if this script is not changed):
 rewrite = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -173,11 +173,14 @@ disp([' === estimates for total data  ===']);
 % correct one, so lets calculate mean and std)
 % permutations with repetitions:
 E = sum(permrep(E), 2);
-disp(['Braking energy                                     : ' num2str(mean(E)) ' J.']);
 % uncertainty components:
-uE = sqrt(sum(permrep(uE).^2, 2));
-disp(['Uncertainty caused by pulse noise fitting          : ' num2str(max(uE)) ' J (' num2str(max(uE)./mean(E).*100) ' %).']);
-disp(['Uncertainty caused by unknown correct configuration: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).']);
+% simple sum (not sqrt of sum of squares) because correlation is considered
+% as 1, therefore sum of input quantities propagates into simple sum of uncertainties
+% (see GUM Guide 1, page 21 top)
+uE = sum(permrep(uE), 2);
+disp(['>> Braking energy : ' num2str(mean(E)) ' J +- ' num2str(max(uE)) ', (' num2str(max(uE)./mean(E).*100) ' %).']);
+disp(['Typical un. of braking energy in group caused by pulse noise fitting and gain/offset : ' num2str(mean(uE)) ' J (' num2str(mean(uE)./mean(E).*100) ' %).']);
+disp(['Std. of uncs. of braking energy in group caused by unknown correct conf.: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).']);
 % do the same for energy of noise:
 EPN = sum(permrep(EPN), 2);
 EN = sum(permrep(EN), 2);

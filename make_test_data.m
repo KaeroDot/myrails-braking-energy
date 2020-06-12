@@ -52,9 +52,19 @@ Io_lvl = 0.001; % A
 % Therefore:
 % Energy: U*I*t
 % Energy of for single pulse: 1800*1000*5/37.5e3 + 2200*1100*5/37.5 = 240 + 322.66 = 562.66 J (557.33 J for second configuration)
+%       Total energy of pulses in one group: 8439.9 (8360 second conf.)
+%       Total energy of pulses in all groups: 3*8439.9 = 25320 (25080 second conf.)
 % Energy of noise during pulse: 1800*0.001*5/37.5e3 + 2200*0.001*5/37.5e3 = 0.000240 + 0.000293 = 0.000533 J (the same for second configuration)
-%               Energy of noise during both whole waveform: 2 * 0.000533*15*3 = 0.048 J
+%       Energy of pulse noise during both whole waveforms: 2 * 0.000533*15*3 = 0.048 J
 % Energy of noise from start of pulse to next start of pulse: 1800*0.001*25/37.5e3 + 2200*0.001*25/37.5e3 = 0.0012 + 0.00146     = 0.00266 J (the same for second configuration)
+% Total energy of noise during whole 2nd group: 1800*0.001*(15*(5+20)/37500+3) + 2200*0.001*(15*(5+20)/37500+3) = 5.418 + 6.622 = 12.040
+%       Total energy of noise during whole waveform: 3*12.040 + 3*(1800*0.001 + 2200*0.001) = 48.12 J
+
+% Uncertainties for uIo = 0.1; % A urIg = 0.02; uVo = 0.1; % V urVg = 0.00201
+% Single pulse energy uncertainty: ((sqrt(0.02^2+0.0025^2)*240)^2 + (sqrt(0.02^2+0.0025^2)*322)^2)^0.5 = 8.09 J, i.e. 0.0144 (1.4 %)
+%       One group pulse energy uncertainty: 15*8.09 = 121.35 <- linear sum because correlation is 1!
+%       Total pulse energy uncertainty: 3*121.35 = 364.05<- linear sum because correlation is 1!
+
 
 disp(' === Testing data ===')
 disp(['Current Ia: ' num2str(Ia_lvl) ' A, Ib: ' num2str(Ib_lvl) ' A.'])
