@@ -9,7 +9,7 @@
 % - uncertainty for detection of pulse start
 % - uncertainty for noise level subtraction
 
-function [uncrE1, uncrE2, uncrEPN1, uncrEPN2] = pulse_uncertainty(Ia, Ib, Vhf, Vdsfhf, fs, ids, ide, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, pulseno, dirpath);
+function [uncrE1, uncrE2, uncrEPN1, uncrEPN2 report] = pulse_uncertainty(Ia, Ib, Vhf, Vdsfhf, fs, ids, ide, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, pulseno, dirpath);
 % uncrE1 - relative uncertainty, configuration 1
 % uncrE2 - relative uncertainty, configuration 2
 % uncrEPN1 - relative uncertainty of noise, configuration 1
@@ -28,8 +28,8 @@ function [uncrE1, uncrE2, uncrEPN1, uncrEPN2] = pulse_uncertainty(Ia, Ib, Vhf, V
 % pulseno - pulse number
 % dirpath - path for plots
 
-
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1
+% XXX error of bandwith - from estimation of rectangular peak harmonics cut off
 % XXX range? etc.
 % current offset uncertainty:
 % XXX unknown
@@ -47,6 +47,7 @@ urVg = 0.0025;
 M = 1e4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+report = {};
 
 if plots
         % show plot with pulse, a and b current
@@ -80,6 +81,7 @@ if plots
         plot(haa, [idePN idePN], [1 max(Ia)], '-k');
         plot(hab, [idsPN idsPN], [1 max(Ib)], '-k');
         plot(hab, [idePN idePN], [1 max(Ib)], '-k');
+        % plot continues ...
 end
 
 i = 1; % this is only because I am lazy to delete all '(i)' from equation below, that were copied from energy3.m
@@ -177,7 +179,7 @@ uncrE2 = (uncrE2.^2 + urE2.^2)^0.5;
 
 % display informations: %<<<1
 % description is not really clear, improve! XXX
-disp(sprintf('pulse %d. u_r from fitting: %.3g, %.3g, from noise/gain: %.3g, %.3g.', pulseno, uncrE1, uncrE2, urE1, urE2));
+report{end+1} = sprintf('pulse %d. u_r from fitting: %.3g, %.3g, from noise/gain: %.3g, %.3g.', pulseno, uncrE1, uncrE2, urE1, urE2);
 
 if plots
         % finish plotting
@@ -194,3 +196,6 @@ if plots
         saveplot(sprintf('%05d-selected_current_pulse_Ia_%04d', groupindex, pulseno), dirpath)
         close
 end
+
+%% --- Report -------------------- %<<<1
+report = strjoin(report, sprintf('\n'));

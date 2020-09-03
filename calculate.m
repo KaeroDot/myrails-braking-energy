@@ -5,19 +5,22 @@
 % Helko van den Brom, Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 % hvdbrom@vsl.nl
 
-clear all;
+function [E, uE, report] = calculate(dirpath, fs)
+% dirpath - directory with data
+% fs - sampling frequency
 
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%
-% sampling frequency (Hz):
-fs = 37.5e3;
-% directory with all data:
-dirpath = 'exampledata';
-% dirpath = 'testdata';
 % make plots? (0/1):
-plots = 0;
-% rewrite splitted data? (can take long time, has no sense if this script is not changed):
+plots = 1;
+% make all plots even with full current and pulse start/end marks?
+% (these plots takes awfully long!)
+full_current_plot = 0;
+% rewrite splitted data? (can take long time, has no sense if this script or data are not changed):
 rewrite = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% report with results:
+report = {['Sampling frequency: ' num2str(fs)]};
 
 %% --- Load data -------------------- %<<<1
 % load example data
@@ -159,15 +162,15 @@ EN = zeros(2, size(groups_start_id, 2));
 uE = zeros(2, size(groups_start_id, 2));
 urE = zeros(2, size(groups_start_id, 2));
 for i = 1:length(groups_start_id)
-        disp([' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ===']);
+        report{end+1} = [' === group ' num2str(i) ' from ' num2str(length(groups_start_id)) ' ==='];
         % [E(:,i)] = energy(i, fs, triglvl, dirpath, plots);
-        [E(:,i) EPN(:,i) EN(:,i) urE(:,i)] = energy3(i, fs, triglvl, dirpath, plots);
+        [E(:,i) EPN(:,i) EN(:,i) urE(:,i) report{end+1}] = energy3(i, fs, triglvl, dirpath, plots, full_current_plot);
         uE = urE.*E;
 end
 
 %% --- Calculate total energy -------------------- %<<<1
-disp([' =================================']);
-disp([' === estimates for total data  ===']);
+report{end+1} = ['================================='];
+report{end+1} = ['=== estimates for total data  ==='];
 % get all possibilities of E_1 and E_2
 % (i.e. all possible combinations of setups in braking groups. We do not know which combination is
 % correct one, so lets calculate mean and std)
@@ -178,13 +181,19 @@ E = sum(permrep(E), 2);
 % as 1, therefore sum of input quantities propagates into simple sum of uncertainties
 % (see GUM Guide 1, page 21 top)
 uE = sum(permrep(uE), 2);
-disp(['>> Braking energy : ' num2str(mean(E)) ' J +- ' num2str(max(uE)) ', (' num2str(max(uE)./mean(E).*100) ' %).']);
-disp(['Typical un. of braking energy in group caused by pulse noise fitting and gain/offset : ' num2str(mean(uE)) ' J (' num2str(mean(uE)./mean(E).*100) ' %).']);
-disp(['Std. of uncs. of braking energy in group caused by unknown correct conf.: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).']);
+report{end+1} = ['>> Braking energy : ' num2str(mean(E)) ' J +- ' num2str(max(uE)) ', (' num2str(max(uE)./mean(E).*100) ' %).'];
+report{end+1} = ['Typical un. of braking energy in group caused by pulse noise fitting and gain/offset : ' num2str(mean(uE)) ' J (' num2str(mean(uE)./mean(E).*100) ' %).'];
+report{end+1} = ['Std. of uncs. of braking energy in group caused by unknown correct conf.: ' num2str(std(E)) ' J (' num2str(std(E)./mean(E).*100) ' %).'];
 % do the same for energy of noise:
 EPN = sum(permrep(EPN), 2);
 EN = sum(permrep(EN), 2);
-disp(['Noise during pulse energy: (' num2str(mean(EPN)) ' +- ' num2str(std(EPN)) ') J (' num2str(std(EPN)./mean(EPN).*100) ' %).']);
-disp(['Ratio of noise during pulse energy and braking energy is ' num2str(mean(EPN)./mean(E).*100) ' %.']);
-disp(['Total noise energy (overestimated): (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).']);
-disp(['Total noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.']);
+report{end+1} = ['Noise during pulse energy: (' num2str(mean(EPN)) ' +- ' num2str(std(EPN)) ') J (' num2str(std(EPN)./mean(EPN).*100) ' %).'];
+report{end+1} = ['Ratio of noise during pulse energy and braking energy is ' num2str(mean(EPN)./mean(E).*100) ' %.'];
+report{end+1} = ['Total noise energy (overestimated): (' num2str(mean(EN)) ' +- ' num2str(std(EN)) ') J (' num2str(std(EN)./mean(EN).*100) ' %).'];
+report{end+1} = ['Total noise energy is ' num2str(mean(EN)./(mean(E) + mean(EN))*100) ' % of total energy.'];
+
+%% --- Print report -------------------- %<<<1
+report = strjoin(report, sprintf('\n'));
+fid = fopen(fullfile(dirpath, '_report.txt'), 'w');
+fprintf(fid, '%s', report);
+fclose(fid);

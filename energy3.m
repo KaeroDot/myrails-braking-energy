@@ -8,7 +8,7 @@
 % The two voltages are switched for each pulse for two currents. For the first pulse the first
 % voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
 % applied to first current -> configuration 2. 
-function [E EPN EN urE] = energy3(groupindex, fs, triglvl, dirpath, plots);
+function [E EPN EN urE report] = energy3(groupindex, fs, triglvl, dirpath, plots, full_current_plot);
 
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1
 % Time shift by which will be shifted back in time the point of split for start of pulse and shifted forward the
@@ -27,6 +27,8 @@ noofpulses_for_unc = 100;
 randomize_pulses_for_unc = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+report = {};
+
 %% --- Load data -------------------- %<<<1
 varnms = {'Ia', 'Ib', 'Vdsf', 'Vhf'};
 % generate all filenames
@@ -43,11 +45,11 @@ t = [1:length(Ia)]./fs - 1/fs;
 Vdsfhf = Vdsf - Vhf;
 
 %% --- Display basic informations about signal -------------------- %<<<1
-disp(['Length of signal: ' num2str(length(Ia)) ' samples, duration: ' num2str(length(Ia)./fs) ' s.'])
-disp(sprintf('Ia: max: %g A, std: %g A.', max(Ia), std(Ia)))
-disp(sprintf('Ib: max: %g A, std: %g A.', max(Ib), std(Ib)))
-disp(sprintf('Vhf: mean: %g V, std: %g V.', mean(Vhf), std(Vhf)))
-disp(sprintf('Vdsf: mean: %g V, std: %g V.', mean(Vdsf), std(Vdsf)))
+report{end+1} = ['Length of signal: ' num2str(length(Ia)) ' samples, duration: ' num2str(length(Ia)./fs) ' s.'];
+report{end+1} = sprintf('Ia: max: %g A, std: %g A.', max(Ia), std(Ia));
+report{end+1} = sprintf('Ib: max: %g A, std: %g A.', max(Ib), std(Ib));
+report{end+1} = sprintf('Vhf: mean: %g V, std: %g V.', mean(Vhf), std(Vhf));
+report{end+1} = sprintf('Vdsf: mean: %g V, std: %g V.', mean(Vdsf), std(Vdsf));
 
 %% --- Finding indexes of pulse starts and pulse ends and pulse lengths -------------------- %<<<1
 % all below trigger is zero, all above is 1:
@@ -96,51 +98,51 @@ periods = diff(ids);
 
 %% --- Display informations about pulses -------------------- %<<<1
 if pulses
-        disp('Current Ia:')
-        disp(['off lengths in samples: ' ...
+        report{end+1} = 'Current Ia:';
+        report{end+1} = ['off lengths in samples: ' ...
                   'count=' num2str(length(lengthsoff)) ...
                 ', mean='  num2str(mean(lengthsoff)) ...
                 ', median=' num2str(median(lengthsoff)) ...
                 ', std=' num2str(std(lengthsoff)) ...
                 ', min=' num2str(min(lengthsoff)) ...
-                ', max=' num2str(max(lengthsoff))])
-        disp(['on lengths in samples: ' ...
+                ', max=' num2str(max(lengthsoff))];
+        report{end+1} = ['on lengths in samples: ' ...
                   'count=' num2str(length(lengthson)) ...
                 ', mean='  num2str(mean(lengthson)) ...
                 ', median=' num2str(median(lengthson)) ...
                 ', std=' num2str(std(lengthson)) ...
                 ', min=' num2str(min(lengthson)) ...
-                ', max=' num2str(max(lengthson))])
-        disp(['periods in samples: ' ...
+                ', max=' num2str(max(lengthson))];
+        report{end+1} = ['periods in samples: ' ...
                   'count=' num2str(length(periods)) ...
                 ', mean='  num2str(mean(periods)) ...
                 ', median=' num2str(median(periods)) ...
                 ', std=' num2str(std(periods)) ...
                 ', min=' num2str(min(periods)) ...
-                ', max=' num2str(max(periods))])
-        disp(['off lengths in miliseconds: ' ...
+                ', max=' num2str(max(periods))];
+        report{end+1} = ['off lengths in miliseconds: ' ...
                   'count=' num2str(length(lengthsoff)) ...
                 ', mean='  num2str(mean(lengthsoff)./fs*1000) ...
                 ', median=' num2str(median(lengthsoff)./fs*1000) ...
                 ', std=' num2str(std(lengthsoff./fs*1000)) ...
                 ', min=' num2str(min(lengthsoff./fs*1000)) ...
-                ', max=' num2str(max(lengthsoff./fs*1000))])
-        disp(['on lengths in miliseconds: ' ...
+                ', max=' num2str(max(lengthsoff./fs*1000))];
+        report{end+1} = ['on lengths in miliseconds: ' ...
                   'count=' num2str(length(lengthson)) ...
                 ', mean='  num2str(mean(lengthson)./fs*1000) ...
                 ', median=' num2str(median(lengthson)./fs*1000) ...
                 ', std=' num2str(std(lengthson)./fs*1000) ...
                 ', min=' num2str(min(lengthson)./fs*1000) ...
-                ', max=' num2str(max(lengthson)./fs*1000)])
-        disp(['periods in miliseconds: ' ...
+                ', max=' num2str(max(lengthson)./fs*1000)];
+        report{end+1} = ['periods in miliseconds: ' ...
                   'count=' num2str(length(periods)) ...
                 ', mean='  num2str(mean(periods)./fs*1000) ...
                 ', median=' num2str(median(periods)./fs*1000) ...
                 ', std=' num2str(std(periods)./fs*1000) ...
                 ', min=' num2str(min(periods)./fs*1000) ...
-                ', max=' num2str(max(periods)./fs*1000)])
+                ', max=' num2str(max(periods)./fs*1000)];
 else
-        disp('No detected pulses. Only noise data');
+        report{end+1} = 'No detected pulses. Only noise data';
 end
 
 %% --- Get split indexes and times -------------------- %<<<1
@@ -165,8 +167,8 @@ if pulses
         % pulse/PN shift indexes %<<<2
         tshift_pulse = min([tshift_pulse fix((lengthsoff - 1)./2)]);
         tshift_PN = min([tshift_PN fix((lengthsoff - 1)./2)]);
-        disp(['Minimal off length is ' num2str(min(lengthsoff)) ' samples. All pulse starts will be shifted back by ' num2str(tshift_pulse) ' samples. All pulse ends will be shifted forward by ' num2str(tshift_pulse) ' samples.'])
-        disp(['The noise around pulse will be estimated from ' num2str(tshift_PN) ' samples before and after pulse start.'])
+        report{end+1} = ['Minimal off length is ' num2str(min(lengthsoff)) ' samples. All pulse starts will be shifted back by ' num2str(tshift_pulse) ' samples. All pulse ends will be shifted forward by ' num2str(tshift_pulse) ' samples.'];
+        report{end+1} = ['The noise around pulse will be estimated from ' num2str(tshift_PN) ' samples before and after pulse start.'];
 
         % pulse start indexes %<<<2
         idsS = ids - tshift_pulse;
@@ -216,7 +218,8 @@ if pulses
                 % randomly generate which pulses will be selected for, non repeating indexes:
                 pulses_for_unc = ids(randperm(length(ids)))(1:noofpulses_for_unc);
         else
-                pulses_for_unc = fix(linspace(2, length(ids)-1, noofpulses_for_unc));
+                % just select pulses in linear sequence:
+                pulses_for_unc = fix(linspace( min(ids), max(ids), min([noofpulses_for_unc length(ids)-1]) ));
         end
 end
 % prepare variable to speed up for loop:
@@ -278,7 +281,7 @@ if pulses
                 idx1 = idsPN(i) - 2*tshift_PN_unc;
                 idx2 = idePN(i) + 2*tshift_PN_unc;
                 if any(ids(i) == pulses_for_unc)
-                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i)] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
+                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i) report{end+1}] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
         end
         % remove start of fictive pulse that was added before the for loop
@@ -337,30 +340,30 @@ end
 
 %% --- Display info about energies -------------------- %<<<1
 
-disp(['Energy of total noise (overestimated) conf. 1: ' num2str(EN(1)) ' J, conf. 2: ' num2str(EN(2)) ' J.']);
-disp(['Error between total noise energies of two configurations (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)]);
-disp(['Error between total noise energies of two configurations (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)]);
+report{end+1} = ['Energy of total noise (overestimated) conf. 1: ' num2str(EN(1)) ' J, conf. 2: ' num2str(EN(2)) ' J.'];
+report{end+1} = ['Error between total noise energies of two configurations (EN2-EN1)/EN2 (%): ' num2str((EN(2)-EN(1))/EN(1).*100)];
+report{end+1} = ['Error between total noise energies of two configurations (EN1-EN2)/EN1 (%): ' num2str((EN(1)-EN(2))/EN(2).*100)];
 if pulses
-        disp(['Energy of noise during pulse conf. 1: ' num2str(EPN(1)) ' J, conf. 2: ' num2str(EPN(2)) ' J.']);
-        disp(['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.']);
-        disp(['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.']);
+        report{end+1} = ['Energy of noise during pulse conf. 1: ' num2str(EPN(1)) ' J, conf. 2: ' num2str(EPN(2)) ' J.'];
+        report{end+1} = ['Ratio of noise during pulse to pulse energy, conf. 1 is ' num2str(sum(EPN(1))./sum(E(1)).*100) ' %.'];
+        report{end+1} = ['Ratio of noise during pulse to pulse energy, conf. 2 is ' num2str(sum(EPN(2))./sum(E(2)).*100) ' %.'];
 
-        disp(['Total noise conf. 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total pulse energy conf. 1.']);
-        disp(['Total noise conf. 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total pulse energy conf. 2.']);
+        report{end+1} = ['Total noise conf. 1 is ' num2str(sum(EN(1))./sum(E(1)).*100) ' % of total pulse energy conf. 1.'];
+        report{end+1} = ['Total noise conf. 2 is ' num2str(sum(EN(2))./sum(E(2)).*100) ' % of total pulse energy conf. 2.'];
 
-        disp(['Error between total pulse energies of two configurations (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)]);
-        disp(['Error between total pulse energies of two configurations (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)]);
+        report{end+1} = ['Error between total pulse energies of two configurations (E2-E1)/E2 (%): ' num2str((E(2)-E(1))/E(1).*100)];
+        report{end+1} = ['Error between total pulse energies of two configurations (E1-E2)/E1 (%): ' num2str((E(1)-E(2))/E(2).*100)];
 
-        disp(['Relative uncertainty of single pulse energy E1: mean: ' num2str(nanmean(uncrE1).*100) ', min: ' num2str(min(uncrE1).*100) ', max: ' num2str(max(uncrE1).*100) ' %']);
-        disp(['Relative uncertainty of single pulse energy E2  mean: ' num2str(nanmean(uncrE2).*100) ', min: ' num2str(min(uncrE2).*100) ', max: ' num2str(max(uncrE2).*100) ' %']);
+        report{end+1} = ['Relative uncertainty of single pulse energy E1: mean: ' num2str(nanmean(uncrE1).*100) ', min: ' num2str(min(uncrE1).*100) ', max: ' num2str(max(uncrE1).*100) ' %'];
+        report{end+1} = ['Relative uncertainty of single pulse energy E2  mean: ' num2str(nanmean(uncrE2).*100) ', min: ' num2str(min(uncrE2).*100) ', max: ' num2str(max(uncrE2).*100) ' %'];
 
-        disp(['>> Total pulse energy conf. 1: ' num2str(E(1)) ' J, conf. 2: ' num2str(E(2)) ' J.']);
-        disp(['>> Uncertainty of total pulse energy: conf. 1: ' num2str(uE(1)) ' J, conf. 2: ' num2str(min(uE(2))) 'J, (' num2str(uE(1)./E(1).*100) ' %, ' num2str(uE(2)./E(2).*100) ' %).']);
+        report{end+1} = ['>> Total pulse energy conf. 1: ' num2str(E(1)) ' J, conf. 2: ' num2str(E(2)) ' J.'];
+        report{end+1} = ['>> Uncertainty of total pulse energy: conf. 1: ' num2str(uE(1)) ' J, conf. 2: ' num2str(min(uE(2))) 'J, (' num2str(uE(1)./E(1).*100) ' %, ' num2str(uE(2)./E(2).*100) ' %).'];
 
         Esim(1,1) = sum(lengthson)./fs.*max(Ia).*mean(Vhf) + sum(lengthson)./fs.*max(Ib).*mean(Vdsfhf);
         Esim(2,1) = sum(lengthson)./fs.*max(Ia).*mean(Vdsfhf) + sum(lengthson)./fs.*max(Ib).*mean(Vhf);
-        disp(['Total pulse energy based on pulse length and average I,V, for Ia, Vhf: ' num2str(Esim(1)) ' J, for Ib, Vdsfhf: ' num2str(Esim(2)) ' J,'])
-        disp(['first value is ' num2str(Esim(1)./E(1).*100) ' % of total pulse energy conf. 1.'])
+        report{end+1} = ['Total pulse energy based on pulse length and average I,V, for Ia, Vhf: ' num2str(Esim(1)) ' J, for Ib, Vdsfhf: ' num2str(Esim(2)) ' J,'];
+        report{end+1} = ['first value is ' num2str(Esim(1)./E(1).*100) ' % of total pulse energy conf. 1.'];
 end
 
 %% --- 2DO -------------------- XXX %<<<1
@@ -368,42 +371,81 @@ end
 
 %% --- Plotting -------------------- %<<<1
 if plots
-        % plot current with lines showing splitting  %<<<2
-        % this figure is challenging the hardware, use only if needed!
-        figure
-        hold on
-        if pulses
-                yl = [min(Ia) max(Ia)];
-                yl(1) = 1;
-                disp('this will be slow...')
-                y = repmat(yl', 1, length(t(ids)));
-                x = repmat(t(ids), 2, 1);
-                plot(x,y,'-r');
-                x = repmat(t(ide), 2, 1);
-                disp('still working...')
-                plot(x,y,'-r');
-                x = repmat(t(idsS), 2, 1);
-                disp('still working....')
-                plot(x,y,'-g');
-                x = repmat(t(ideS), 2, 1);
-                disp('still working.....')
-                plot(x,y,'-g');
-                x = repmat(t(idsPN), 2, 1);
-                disp('still working......')
-                plot(x,y,'+k');
-                x = repmat(t(idePN), 2, 1);
-                disp('still working.......')
-                plot(x,y,'ok');
-                title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A\nred: pulse, green: shifted pulse, black +o: noise for pulse', groupindex, mean(Ia), std(Ia)))
-        else
-                title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A', groupindex, mean(Ia), std(Ia)))
-        end
-        plot(t, Ia, '-b')
-        hold off
-        xlabel('time (s)')
-        ylabel('I (A)')
-        saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
-        close
+        if full_current_plot
+                % plot current Ia with lines showing splitting  %<<<2
+                % this figure is challenging the hardware, use only if needed!
+                figure
+                hold on
+                if pulses
+                        yl = [min(Ia) max(Ia)];
+                        yl(1) = 1;
+                        disp('this will be slow...')
+                        y = repmat(yl', 1, length(t(ids)));
+                        x = repmat(t(ids), 2, 1);
+                        plot(x,y,'-r');
+                        x = repmat(t(ide), 2, 1);
+                        disp('still working...')
+                        plot(x,y,'-r');
+                        x = repmat(t(idsS), 2, 1);
+                        disp('still working....')
+                        plot(x,y,'-g');
+                        x = repmat(t(ideS), 2, 1);
+                        disp('still working.....')
+                        plot(x,y,'-g');
+                        x = repmat(t(idsPN), 2, 1);
+                        disp('still working......')
+                        plot(x,y,'+k');
+                        x = repmat(t(idePN), 2, 1);
+                        disp('still working.......')
+                        plot(x,y,'ok');
+                        title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A\nred: pulse, green: shifted pulse, black +o: noise for pulse', groupindex, mean(Ia), std(Ia)))
+                else
+                        title(sprintf('Gr. %d - Current waveform Ia\nmean: %g A, std: %g A', groupindex, mean(Ia), std(Ia)))
+                end
+                plot(t, Ia, '-b')
+                hold off
+                xlabel('time (s)')
+                ylabel('I (A)')
+                saveplot(sprintf('%05d-current_Ia', groupindex), dirpath)
+                close
+
+                % plot current Ib with lines showing splitting  %<<<2
+                % this figure is challenging the hardware, use only if needed!
+                figure
+                hold on
+                if pulses
+                        yl = [min(Ib) max(Ib)];
+                        yl(1) = 1;
+                        disp('this will be slow...')
+                        y = repmat(yl', 1, length(t(ids)));
+                        x = repmat(t(ids), 2, 1);
+                        plot(x,y,'-r');
+                        x = repmat(t(ide), 2, 1);
+                        disp('still working...')
+                        plot(x,y,'-r');
+                        x = repmat(t(idsS), 2, 1);
+                        disp('still working....')
+                        plot(x,y,'-g');
+                        x = repmat(t(ideS), 2, 1);
+                        disp('still working.....')
+                        plot(x,y,'-g');
+                        x = repmat(t(idsPN), 2, 1);
+                        disp('still working......')
+                        plot(x,y,'+k');
+                        x = repmat(t(idePN), 2, 1);
+                        disp('still working.......')
+                        plot(x,y,'ok');
+                        title(sprintf('Gr. %d - Current waveform Ib\nmean: %g A, std: %g A\nred: pulse, green: shifted pulse, black +o: noise for pulse', groupindex, mean(Ib), std(Ib)))
+                else
+                        title(sprintf('Gr. %d - Current waveform Ib\nmean: %g A, std: %g A', groupindex, mean(Ib), std(Ib)))
+                end
+                plot(t, Ib, '-b')
+                hold off
+                xlabel('time (s)')
+                ylabel('I (A)')
+                saveplot(sprintf('%05d-current_Ib', groupindex), dirpath)
+                close
+        end % full_current_plot
 
         if pulses
                 % errors of pulse starts from ideal line %<<<2
@@ -468,3 +510,6 @@ if plots
 
         end
 end % plots
+
+%% --- Report -------------------- %<<<1
+report = strjoin(report, sprintf('\n'));
