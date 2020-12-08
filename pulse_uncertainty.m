@@ -1,5 +1,5 @@
-% tries to estimate uncertainty of pulse energy and noise during pulse
-% it is based on how correctly the noise around pulse is fitted
+% Tries to estimate uncertainty of pulse energy and noise during pulse
+% it is based on how correctly the noise around pulse is fitted.
 % tshift_pulse and tshift_PN are varied based on uncertainty and energy
 % of pulse and noise is calculated. output are uncertainties for both
 % configurations 1 and 2.
@@ -8,6 +8,23 @@
 % - uncertainty for different initial configuration of swticher: Vhf/Ia versus Vdsfhf/Ia
 % - uncertainty for detection of pulse start
 % - uncertainty for noise level subtraction
+
+% Script inputs are:
+% - Ia: current waveform a
+% - Ib: current waveform b
+% - Vhf: voltage at half-filter
+% - Vdsfhf: voltage after down stream filter
+% - fs: data sampling frequency
+% - ids: index of pulse start
+% - ide: index of pulse end
+% - tshift_pulse: time shift (in samples) from pulse start/end to correctly catch whole pulse (safety margin)
+% - tshift_PN: time shift (in samples) from pulse start/end to determine noise
+% - tshift_pulse_unc: maximum variation of shifts
+% - tshift_PN_unc: maximum variation of shifts
+% - plots: if set to 1, plotting will happen
+% - groupindex: index of a breaking group
+% - pulseno: index of a pulse in the breaking group
+% - dirpath: directory path to all data files
 
 function [uncrE1, uncrE2, uncrEPN1, uncrEPN2 report] = pulse_uncertainty(Ia, Ib, Vhf, Vdsfhf, fs, ids, ide, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, pulseno, dirpath);
 % uncrE1 - relative uncertainty, configuration 1

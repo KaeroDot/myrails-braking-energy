@@ -1,4 +1,13 @@
-%% === Calculate energy of a braking group ==================== %<<<1
+% Script calculates Energy Dissipated in Braking Rheostats in DC Railway Systems in a single breaking group. %<<<1
+% In detail, this script does:
+% - load data of breaking group
+% - identifies braking pulse starts and ends
+% - identifies surrounding of the pulses for background noise determination
+% - calculate energy for every pulse
+% - estimate total energy
+% - calls energy uncertainty calculation for selected number of pulses
+% - plots currents and energies of the braking group and some pulses
+%
 % A rise and fall of pulses of first current waveform are found. Time shift of few samples before and
 % after is added and at these points the current waveforms are split. More time shift is added to
 % estimate current offset around the pulse.
@@ -8,6 +17,22 @@
 % The two voltages are switched for each pulse for two currents. For the first pulse the first
 % voltage is applied to first current -> configuration 1. For the first pulse the second voltage is
 % applied to first current -> configuration 2. 
+%
+% Script inputs are:
+% - groupindex: index of a braking group
+% - fs: data sampling frequency
+% - triglvl: trigger level in volts
+% - dirpath: directory path to all data files
+% - plots: if set to 1, plotting will happen
+% - full_current_plot: if set to 1, a very time consuming plot of whole current waveform will be created
+% Script outputs are:
+% (numerical output values are arrays of two elements for two combinations of starting chopper configuration)
+% - E: energies of pulses
+% - EPN: energies of noise during pulses
+% - EN: total energies of noise (in between and during pulses)
+% - urE: relative uncertainties of energies of all pulses
+% - report: text containing report with various informations
+
 function [E EPN EN urE report] = energy3(groupindex, fs, triglvl, dirpath, plots, full_current_plot);
 
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1

@@ -50,7 +50,7 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 - Resistance of braking rheostat is estimated based on peak value of current pulse.
 - Variation of boundaries to obtain uncertainties:
 
-  ![](pulse_fitting_explanation.png)
+  ![](doc/pulse_fitting_explanation.png)
 
 - How uncertainty is calculated:
         1. Pulse uncertainty is based on variating of:
@@ -70,3 +70,6 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 
 ## Assumptions
 - Break pulses appears both in Ia and Ib at +- same place.
+
+## Script dependencies
+![](doc/calculate_dependency.png)

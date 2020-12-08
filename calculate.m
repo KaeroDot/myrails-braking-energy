@@ -1,4 +1,17 @@
-% Script calculates Energy Dissipated in Braking Rheostats in DC Railway Systems
+% Script calculates Energy Dissipated in Braking Rheostats in DC Railway Systems %<<<1
+% In detail, this script does:
+% - loads data
+% - identifies trigger level
+% - identifies braking groups
+% - plots braking groups
+% - divide data according braking groups and save temporary data files
+% - calls energy calculation for every braking group
+% - calculate total energy based on energy of all braking groups
+% - print report
+%
+% Script inputs are:
+% - dirpath: directory path to all data files
+% - fs: data sampling frequency
 
 % Quantity names based on abstract:
 % Accurate Measurement of Energy Dissipated in Braking Rheostats in DC Railway Systems
@@ -6,10 +19,8 @@
 % hvdbrom@vsl.nl
 
 function [E, uE, report] = calculate(dirpath, fs)
-% dirpath - directory with data
-% fs - sampling frequency
 
-%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%
+%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1
 % make plots? (0/1):
 plots = 1;
 % make all plots even with full current and pulse start/end marks?
