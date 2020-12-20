@@ -26,7 +26,7 @@
 % - pulseno: index of a pulse in the breaking group
 % - dirpath: directory path to all data files
 
-function [uncrE1, uncrE2, uncrEPN1, uncrEPN2 report] = pulse_uncertainty(Ia, Ib, Vhf, Vdsfhf, fs, ids, ide, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, pulseno, dirpath);
+function [uncrE1, uncrE2, uncrEPN1, uncrEPN2 report] = pulse_uncertainty(Ia, Ib, Vhf, Vdsfhf, fs, delta, ids, ide, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, pulseno, dirpath);
 % uncrE1 - relative uncertainty, configuration 1
 % uncrE2 - relative uncertainty, configuration 2
 % uncrEPN1 - relative uncertainty of noise, configuration 1
@@ -46,8 +46,6 @@ function [uncrE1, uncrE2, uncrEPN1, uncrEPN2 report] = pulse_uncertainty(Ia, Ib,
 % dirpath - path for plots
 
 %% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%% %<<<1
-% XXX error of bandwith - from estimation of rectangular peak harmonics cut off
-% XXX range? etc.
 % current offset uncertainty:
 % XXX unknown
 uIo = 0.1; % A
@@ -66,7 +64,7 @@ M = 1e4;
 
 report = {};
 
-if plots
+if plots %<<<1
         % show plot with pulse, a and b current
         idsS = ids - tshift_pulse;
         ideS = ide + tshift_pulse;
@@ -99,9 +97,7 @@ if plots
         plot(hab, [idsPN idsPN], [1 max(Ib)], '-k');
         plot(hab, [idePN idePN], [1 max(Ib)], '-k');
         % plot continues ...
-end
-
-i = 1; % this is only because I am lazy to delete all '(i)' from equation below, that were copied from energy3.m
+end %>>>1
 
 % calculate uncertainty of energy based on uncertainty of noise and pulse limits %<<<1
 % generate all possible shifts in time for start/end of pulse
@@ -116,64 +112,51 @@ for k = 1:length(pulse_ids)
         for j = 1:length(PN_ids)
                 idsPN = ids - PN_ids(j);
                 idePN = ide + PN_ids(j);
-                % copied from energy3 - should be changed into subfunction! XXX
+                                                                % copied from energy3 - should be changed into subfunction! XXX
 
-                % copy start here <<<<
-                    % x axis - just indexes, sufficient for fit:
-                    x = [idsPN(i):idsS(i) ideS(i):idePN(i)];
-                    % fit noise around pulse for current a
-                    pa = polyfit(x, [Ia(idsPN(i):idsS(i)) Ia(ideS(i):idePN(i))], 1);
-                    % tmpIa = Ia(idsS(i):ideS(i)) - polyval(pa, [idsS(i):ideS(i)]);
-                    IaN = polyval(pa, [idsS(i):ideS(i)]);
-                    % fit noise around pulse for current b
-                    pb = polyfit(x, [Ib(idsPN(i):idsS(i)) Ib(ideS(i):idePN(i))], 1);
-                    % tmpIb = Ib(idsS(i):ideS(i)) - polyval(pb, [idsS(i):ideS(i)]);
-                    IbN = polyval(pb, [idsS(i):ideS(i)]);
-                    % energy of pulse:
-                    E1(i) = trapz(Vhf   (idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
-                    E2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vhf   (idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
-                    % energy of noise part during pulse:
-                    tmpE1 = trapz(Vhf   (idsS(i):ideS(i)).*IaN)./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*IbN)./fs;
-                    tmpE2 = trapz(Vdsfhf(idsS(i):ideS(i)).*IaN)./fs + trapz(Vhf   (idsS(i):ideS(i)).*IbN)./fs;
-                    % subtract energy of noise from energy of pulse:
-                    E1(i) = E1(i) - tmpE1;
-                    E2(i) = E2(i) - tmpE2;
-                % copy end here >>>>
+% delta randomizace
+% Vhf a Vdsfhf randomizace
+% Ia, Ib randomizace amplitudy
 
-                % calculate uncertainty of energy based on current and voltage offsets and gains %<<<1
+                % RaX and RbX is not needed
+                [E1(k,j), E2(k,j), EPN1(k,j), EPN2(k,j), Ra1, Ra2, Rb1, Rb2, IaN, IbN] = single_pulse_energy(fs, Vhf, Vdsfhf, Ia, Ib, delta, ideS, idsS, idsPN, idePN, []);
+
+                % calculate uncertainty of energy based on current and voltage offsets and gains %<<<2
                 % this uncertainty is calculated only for values if idsS,ideS without uncertainties
                 % (nonrandomized pulse/noise start/end)
                 if (idsS == (ids - tshift_pulse)) && (idsPN == (ids - tshift_PN))
                         % ensure row vector:
-                        Iatmp = Ia(idsS(i):ideS(i))(:)';
+                        Iatmp = Ia(idsS:ideS)(:)';
                         % make monte carlo randomization with offset,gain into matrix (rows are monte carlo)
                         Iam = normrnd(1, urIg, M, 1).*Iatmp + normrnd(0, uIo, M, size(Iatmp, 2));
                         % subtract estimated offset line:
                         Iam = bsxfun(@minus, Iam, IaN);
-                        Ibtmp = Ib(idsS(i):ideS(i))(:)';
+                        Ibtmp = Ib(idsS:ideS)(:)';
                         Ibm = normrnd(1, urIg, M, 1).*Ibtmp + normrnd(0, uIo, M, size(Ibtmp, 2));
                         Ibm = bsxfun(@minus, Ibm, IbN);
 
-                        Vhftmp = Vhf(idsS(i):ideS(i))(:)';
+                        Vhftmp = Vhf(idsS:ideS)(:)';
                         Vhfm = normrnd(1, urVg, M, 1).*Vhftmp + normrnd(0, uVo, M, size(Vhftmp, 2));
-                        Vdsfhftmp = Vdsfhf(idsS(i):ideS(i))(:)';
+                        Vdsfhftmp = Vdsfhf(idsS:ideS)(:)';
                         Vdsfhfm = normrnd(1, urVg, M, 1).*Vdsfhftmp + normrnd(0, uVo, M, size(Vdsfhftmp, 2));
 
 
                         tmp1 = trapz(Vhfm   .*Iam, 2)./fs;
                         tmp2 = trapz(Vdsfhfm.*Ibm, 2)./fs;
+                        # XXX tady asi melo byt uE1(k,j) nebo uE1(i) nebo neco takoveho - ne,
+                        # protoze se to pocita jen jednou
                         uE1 = trapz(Vhfm   .*Iam, 2)./fs + trapz(Vdsfhfm.*Ibm, 2)./fs;
                         uE2 = trapz(Vdsfhfm.*Iam, 2)./fs + trapz(Vhfm   .*Ibm, 2)./fs;
-                end
-                % put energy into matrix:
-                E1p(k,j) = E1(i);
-                E2p(k,j) = E2(i);
-                EPN1(k,j) = tmpE1;
-                EPN2(k,j) = tmpE2;
+                end %<<<2
+                                                                % % put energy into matrix:
+                                                                % E1p(k,j) = E1(i);
+                                                                % E2p(k,j) = E2(i);
+                                                                % EPN1(k,j) = tmpE1;
+                                                                % EPN2(k,j) = tmpE2;
 
                 if plots
-                        plot(haa, idsS(i):ideS(i), IaN)
-                        plot(hab, idsS(i):ideS(i), IbN)
+                        plot(haa, idsS:ideS, IaN)
+                        plot(hab, idsS:ideS, IbN)
                 end
         end
 end
@@ -181,14 +164,15 @@ end
 % calculate relative standard uncertainty: %<<<1
 % uncertainty by noise fitting:
 % (the probability distribution function is not simple, so suppose rectangular distribution:)
-uncrE1   = ( std(E1p(:))./sqrt(3)   )./mean(E1(:));
-uncrE2   = ( std(E2p(:))./sqrt(3)   )./mean(E1(:));
+uncrE1   = ( std(E1(:))./sqrt(3)   )./mean(E1(:));
+uncrE2   = ( std(E2(:))./sqrt(3)   )./mean(E1(:));
 uncrEPN1 = ( std(EPN1(:))./sqrt(3) )./mean(E1(:));
 uncrEPN2 = ( std(EPN2(:))./sqrt(3) )./mean(E1(:));
 
 % uncertainty caused by offset/gain:
-urE1 = (uncrE1.^2 + (std(uE1)./mean(E1))^2 )^0.5;
-urE2 = (uncrE2.^2 + (std(uE2)./mean(E2))^2 )^0.5;
+                        # XXX tady asi melo byt uE1(:) nebo neco takoveho - ne, protoze se uE1/2 pocita jen jednou
+urE1 = (uncrE1.^2 + (std(uE1)./mean(E1(:))).^2 )^0.5;
+urE2 = (uncrE2.^2 + (std(uE2)./mean(E2(:))).^2 )^0.5;
 
 
 uncrE1 = (uncrE1.^2 + urE1.^2)^0.5;

@@ -121,6 +121,11 @@ lengthsoff = lengths(tmp(1:end-1));
 % get lengths between positive slopes - periods of pulses (in samples): 
 periods = diff(ids);
 
+%  calculate braking period (in samples)
+if pulses
+        Tb = get_braking_period(periods);
+end
+
 %% --- Display informations about pulses -------------------- %<<<1
 if pulses
         report{end+1} = 'Current Ia:';
@@ -166,6 +171,7 @@ if pulses
                 ', std=' num2str(std(periods)./fs*1000) ...
                 ', min=' num2str(min(periods)./fs*1000) ...
                 ', max=' num2str(max(periods)./fs*1000)];
+        report{end+1} = ['braking period (samples): ' num2str(Tb)];
 else
         report{end+1} = 'No detected pulses. Only noise data';
 end
@@ -268,33 +274,14 @@ if pulses
         % if idsS(end) is already equal to length(Ia), nothing happen because there will be only 0 value.
         idsS(end+1) = length(Ia);
         for i = 1:(length(ids))
-                % x axis - just indexes, sufficient for fit:
-                x = [idsPN(i):idsS(i) ideS(i):idePN(i)];
-                % fit noise around pulse for current a
-                pa = polyfit(x, [Ia(idsPN(i):idsS(i)) Ia(ideS(i):idePN(i))], 1);
-                % tmpIa = Ia(idsS(i):ideS(i)) - polyval(pa, [idsS(i):ideS(i)]);
-                IaN = polyval(pa, [idsS(i):ideS(i)]);
-                % fit noise around pulse for current b
-                pb = polyfit(x, [Ib(idsPN(i):idsS(i)) Ib(ideS(i):idePN(i))], 1);
-                % tmpIb = Ib(idsS(i):ideS(i)) - polyval(pb, [idsS(i):ideS(i)]);
-                IbN = polyval(pb, [idsS(i):ideS(i)]);
-                % resistance of shunts during pulse:
-                id = find(max(Ia(idsS(i):ideS(i))) == Ia(idsS(i):ideS(i)));
-                id = id(1) + idsS(i) - 1;
-                Ra1(i) = Vhf   (id)./Ia(id);
-                Ra2(i) = Vdsfhf(id)./Ia(id);
-                Rb1(i) = Vhf   (id)./Ib(id);
-                Rb2(i) = Vdsfhf(id)./Ib(id);
-                % energy of pulse:
-                E1(i) = trapz(Vhf   (idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
-                E2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*Ia(idsS(i):ideS(i)))./fs + trapz(Vhf   (idsS(i):ideS(i)).*Ib(idsS(i):ideS(i)))./fs;
-                % energy of noise part during pulse:
-                EPN1(i) = trapz(Vhf   (idsS(i):ideS(i)).*IaN)./fs + trapz(Vdsfhf(idsS(i):ideS(i)).*IbN)./fs;
-                EPN2(i) = trapz(Vdsfhf(idsS(i):ideS(i)).*IaN)./fs + trapz(Vhf   (idsS(i):ideS(i)).*IbN)./fs;
-                % subtract energy of noise from energy of pulse:
-                E1(i) = E1(i) - EPN1(i);
-                E2(i) = E2(i) - EPN2(i);
-                % energy of noise after pulse:
+
+                % calculate duty cycle - ratio of pulse length to braking period
+                delta(i) = (ide(i) - ids(i))./Tb;
+
+                % IaN and IbN is not needed here
+                [E1(i), E2(i), EPN1(i), EPN2(i), Ra1(i), Ra2(i), Rb1(i), Rb2(i), IaN, IbN] = single_pulse_energy(fs, Vhf, Vdsfhf, Ia, Ib, delta(i), ideS(i), idsS(i), idsPN(i), idePN(i), '');
+
+                % energy of noise after pulse (between pulses or between pulse and end of record):
                 EN1(i+1) = trapz(Vhf   (ideS(i):idsS(i+1)).*Ia(ideS(i):idsS(i+1)))./fs + trapz(Vdsfhf(ideS(i):idsS(i+1)).*Ib(ideS(i):idsS(i+1)))./fs;
                 EN2(i+1) = trapz(Vdsfhf(ideS(i):idsS(i+1)).*Ia(ideS(i):idsS(i+1)))./fs + trapz(Vhf   (ideS(i):idsS(i+1)).*Ib(ideS(i):idsS(i+1)))./fs;
                 % add energy of noise during pulse into energy of noise after pulse:
@@ -302,11 +289,12 @@ if pulses
                 EN2(i+1) = EN2(i+1) + EPN2(i);
                 % uncertainty of estimation
                 % uncertainty of estimation does the plotting of individual pulses
-                % cut part of currents/voltages so small data are transfered into pulse_uncertainty function:
+                % cut part of currents/voltages so small data are transferred into pulse_uncertainty function:
                 idx1 = idsPN(i) - 2*tshift_PN_unc;
                 idx2 = idePN(i) + 2*tshift_PN_unc;
                 if any(ids(i) == pulses_for_unc)
-                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i) report{end+1}] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
+                        disp(['calculating uncertainty of pulse id ' num2str(i)])
+                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i) report{end+1}] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, delta(i), ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
         end
         % remove start of fictive pulse that was added before the for loop
@@ -533,7 +521,19 @@ if plots
                 saveplot(sprintf('%05d-rheostats_1_2', groupindex), dirpath)
                 close
 
-        end
+                % duty cycle - delta %<<<2
+                figure
+                hold on
+                plot(t_pulsestart, delta, '-b', 'linewidth',2)
+                hold off
+                legend( 'duty cycle')
+                title([num2str(groupindex) ' - Delta'])
+                xlabel('time of pulse start (s)')
+                ylabel('delta (Sa/Sa)')
+                saveplot(sprintf('%05d-duty_cycle', groupindex), dirpath)
+                close
+
+        end % if pulses
 end % plots
 
 %% --- Report -------------------- %<<<1
