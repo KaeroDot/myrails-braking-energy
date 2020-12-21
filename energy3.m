@@ -276,7 +276,7 @@ if pulses
         for i = 1:(length(ids))
 
                 % calculate duty cycle - ratio of pulse length to braking period
-                delta(i) = (ide(i) - ids(i))./Tb;
+                [delta(i), udelta(i)] = get_delta(ids(i), ide(i), Tb);
 
                 % IaN and IbN is not needed here
                 [E1(i), E2(i), EPN1(i), EPN2(i), Ra1(i), Ra2(i), Rb1(i), Rb2(i), IaN, IbN] = single_pulse_energy(fs, Vhf, Vdsfhf, Ia, Ib, delta(i), ideS(i), idsS(i), idsPN(i), idePN(i), '');
@@ -294,7 +294,7 @@ if pulses
                 idx2 = idePN(i) + 2*tshift_PN_unc;
                 if any(ids(i) == pulses_for_unc)
                         disp(['calculating uncertainty of pulse id ' num2str(i)])
-                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i) report{end+1}] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, delta(i), ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
+                        [uncrE1(i), uncrE2(i), uncrEPN1(i), uncrEPN2(i) report{end+1}] = pulse_uncertainty(Ia(idx1:idx2), Ib(idx1:idx2), Vhf(idx1:idx2), Vdsfhf(idx1:idx2), fs, delta(i), udelta(i), ids(i) - idx1 + 1, ide(i) - idx1 + 1, tshift_pulse, tshift_PN, tshift_pulse_unc, tshift_PN_unc, plots, groupindex, i, dirpath);
                 end
         end
         % remove start of fictive pulse that was added before the for loop

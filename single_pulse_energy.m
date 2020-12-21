@@ -1,4 +1,4 @@
-% Script calculates energy of a single pulse, based on paper:
+% Script calculates energy of a single pulse, based on paper: %<<<1
 % D. Giordano, D. Signorino, D. Gallo, H. E. van den Brom, and M. Sira, ‘Methodology for the
 % Accurate Measurement of the Power Dissipated by Braking Rheostats’, Sensors, vol. 20, no. 23, Art.
 % no. 23, Jan. 2020, doi: 10.3390/s20236935.
@@ -38,7 +38,7 @@ function [E1, E2, EPN1, EPN2, Ra1, Ra2, Rb1, Rb2, IaN, IbN] = single_pulse_energ
         % tmpIb = Ib(idsS:ideS) - polyval(pb, [idsS:ideS]);
         IbN = polyval(pb, [idsS:ideS]);
 
-        % resistance of shunts during pulse:
+        % Resistance of shunts during pulse: %<<<1
         id = find(max(Ia(idsS:ideS)) == Ia(idsS:ideS));
         id = id(1) + idsS - 1;
         Ra1 = Vhf   (id)./Ia(id);
@@ -46,18 +46,18 @@ function [E1, E2, EPN1, EPN2, Ra1, Ra2, Rb1, Rb2, IaN, IbN] = single_pulse_energ
         Rb1 = Vhf   (id)./Ib(id);
         Rb2 = Vdsfhf(id)./Ib(id);
 
-        % calculate energy of pulse and noise %<<<1
+        % Calculate energy of pulse and noise %<<<1
         % energy of pulse with noise pulse
         E1 = trapz(Vhf   (idsS:ideS).*Ia(idsS:ideS))./fs + trapz(Vdsfhf(idsS:ideS).*Ib(idsS:ideS))./fs;
         E2 = trapz(Vdsfhf(idsS:ideS).*Ia(idsS:ideS))./fs + trapz(Vhf   (idsS:ideS).*Ib(idsS:ideS))./fs;
         % energy of noise part during pulse:
         EPN1 = trapz(Vhf   (idsS:ideS).*IaN)./fs + trapz(Vdsfhf(idsS:ideS).*IbN)./fs;
         EPN2 = trapz(Vdsfhf(idsS:ideS).*IaN)./fs + trapz(Vhf   (idsS:ideS).*IbN)./fs;
-        % subtract energy of noise from energy of pulse %<<<1
+        % Subtract energy of noise from energy of pulse %<<<1
         E1 = E1 - EPN1;
         E2 = E2 - EPN2;
 
-        % apply pulse shape correction factor K_DC %<<<1
+        % Apply pulse shape correction factor K_DC %<<<1
         % load the table:
         %XXX 2DO load from file
         delta_K_DC_table = [0.007 0.02 0.04 0.08 0.010 0.015 0.030; 0.633 0.850 0.923 0.961 0.969 0.979 0.99]';
@@ -74,7 +74,7 @@ function [E1, E2, EPN1, EPN2, Ra1, Ra2, Rb1, Rb2, IaN, IbN] = single_pulse_energ
         E1 = E1.*K_DC;
         E2 = E2.*K_DC;
 
-        % apply correction for the current sensor K_HOP %<<<1
+        % Apply correction for the current sensor K_HOP %<<<1
         % load the table:
         %XXX 2DO load from file
         delta_K_HOP_table = [0.007 0.02 0.08 0.010 0.015 0.030; 1.124 0.960 0.975 0.980 0.987 0.993];

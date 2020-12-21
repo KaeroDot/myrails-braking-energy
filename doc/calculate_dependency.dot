@@ -4,8 +4,10 @@ node [shape = oval];
 /* start of shape definitions */
 "calculate" [color=lightblue, style=filled];
 "energy3" [color=lightblue, style=filled];
+"pulse_uncertainty" [color=lightblue, style=filled];
 "sgolayfilt" [color=lightblue, style=filled];
 "get_braking_period" [color=lightblue, style=filled];
+"get_delta" [color=lightblue, style=filled];
 "single_pulse_energy" [color=lightblue, style=filled];
 "nansum" [color=lightblue, style=filled];
 "nanmean" [color=lightblue, style=filled];
@@ -14,7 +16,10 @@ node [shape = oval];
 /* end of shape definitions */
 "calculate" -> "energy3" ;
 "energy3" -> "get_braking_period" ;
+"energy3" -> "get_delta" ;
 "energy3" -> "single_pulse_energy" ;
+"energy3" -> "pulse_uncertainty" ;
+"pulse_uncertainty" -> "single_pulse_energy" ;
 "energy3" -> "nansum" ;
 "energy3" -> "nanmean" ;
 "energy3" -> "sgolayfilt" ;
