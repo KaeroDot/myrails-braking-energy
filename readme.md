@@ -17,49 +17,39 @@ Domenico Giordano, Danielle Gallo, Andreas Wank, Yljon Seferi
 ## Features
 - Chopping frequency nor sampling frequency do not have to be exact nor precise. Braking pulses in current waveform are identified by finding starts and ends of pulses.
 - Pulses are identified by setting trigger level voltage, this voltage is found heuristically.
-- Waveforms are splitted into braking groups, New braking group is found if no braking happens for at least 1 second.
+- Waveforms are splitted into braking groups for memory efficiency. New braking group is found if no braking happens for at least 1 second.
 - The energy is calculated in two ways (configurations): ```Vhf*Ia + (Vdsf-Vhf)*Ib```, and ```Vhf*Ib + (Vdsf-Vhf)*Ia```,
   alternately for every pulse.
 - For every group both configurations are calculated.
 - Final value is estimated from all possibilities from 2 configurations for every group - if too
   many groups, Monte Carlo Method is used.
-- Three methods for calculation: ```energy.m```, ```energy2.m```, ```energy3.m```
-- Scripts ```calculate(2,3).m``` reports both energies.
 - Script is optimised to use more harddrive than memory so even desktop computers should be able to
-  run it. However every file IrogA.mat etc. have to be loaded at least once into memory and this
-  action can easily eat 4 - 8 GB of RAM depending on the system, and calculation is slow.
-- Internally script use variable names as in the paper, so renaming of variables happens.
+  run it. However every original file (IrogA.mat etc.) have to be loaded at least once into memory and this
+  action can easily eat 4 - 8 GB of RAM depending on the system.
+- Internally script use variable names as in the paper, so variables saved in original
+  data files are renamed.
 
-## energy.m
-- First tested method.
-- Just calculates energy of all.
+## Pulse energy calculation
+- Energy of single braking pulse is calculated by fitting surrounding noise and subtracting the noise from
+  the pulse.
 
-## energy2.m
-- Second tested method.
-- Differentiate braking pulses and noise between pulses.
-- Noise in between pulses is takes about 30 % of all energy in the signal.
-- Noise in between pulses is overestimated because the voltage drop across the rheostat is some (unknown) zero: Vdwnf falls across the GTO.
+![](doc/pulse_fitting_explanation.png)
 
-## energy3.m
-- Third tested method.
-- Braking pulse energy is calculated by fitting surrounding noise and subtracting fitted noise from
-  pulse.
-- The number of samples between pulse start/end and shifted pulse start/end and noise start/end has
-  to be set at the beginning of the script.
-- Noise in between pulses is overestimated because the voltage drop across the rheostat is some (unknown) zero: Vdwnf falls across the GTO.
+- The number of samples between Detected pulse start/end, Shifted pulse start/end and Noise start/end has
+  to be set in the script energy3.m.
+- Energy of noise in between pulses is overestimated because the voltage drop across the rheostat is some (unknown) zero: Vdwnf falls across the GTO.
 - Resistance of braking rheostat is estimated based on peak value of current pulse.
-- Variation of boundaries to obtain uncertainties:
 
-  ![](doc/pulse_fitting_explanation.png)
-
-- How uncertainty is calculated:
-        1. Pulse uncertainty is based on variating of:
-                - current offset and gain
-                - voltage offset and gain
-                - pulse start and end
-                - fitting noise start and end
-        2. Uncertainty of all pulses in a group is calculated as linear sum of pulse uncertainties, and this is done for both configurations. The reason is the correlation is assumpted as 1. See GUM uncertainty framework, page 21, equation top right.
-        2. Total uncertainty of all pulses in all groups is calculated as maximum of all possible permutations of linear sum of group uncertainties.
+## Uncertainty calculation
+- Pulse uncertainty is based on monte carlo variating of:
+        1. current offset and gain, independently for both currents (two pieces of sensors)
+        1. voltage offset and gain, independently for both voltages (two pieces of digitisers)
+        1. noise fitting (variation by samplses in range set in energy3.m)
+- Uncertainty of all pulses in a group is calculated as linear sum of pulse uncertainties, and this
+  is done for both configurations. The reason is the correlation is assumed to be 1 (see GUM
+  uncertainty framework, page 21, equation top right).
+- Total uncertainty of all pulses in all groups is calculated as maximum of all possible
+  permutations of linear sum of group uncertainties.
 
 ## Issues
 - Identification of pulses is based on finding proper trigger level. This can fail at some time.
